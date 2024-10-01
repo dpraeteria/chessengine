@@ -12,8 +12,12 @@
 /// </para>
 /// </summary>
 struct Move {
-	Coord src_coord;
-	Coord dst_coord;
+	Coord src_crd;
+	Coord dst_crd;
+
+	Move() : src_crd(), dst_crd() {}
+	Move(Coord src_crd, Coord dst_crd)
+		: src_crd(src_crd), dst_crd(dst_crd) {}
 };
 
 #endif // !MOVE_H_INCLUDED

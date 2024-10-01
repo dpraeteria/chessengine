@@ -4,11 +4,15 @@
 
 //! 디버그용 - print(), print_movable_cases() 함수에만 사용
 #include <iostream>
+#include <functional>
+#include <Windows.h>
+#include <conio.h>
 
 #include <string>
 #include <vector>
 #include <cctype>
 #include "Coord.h"
+#include "Move.h"
 using std::string;
 using std::vector;
 
@@ -91,8 +95,8 @@ public:
 	/// </summary>
 	/// <param name="is_white_side"></param>
 	/// <returns></returns>
-	vector<Board> movable_boards(Side side) const {
-		vector<Board> result;
+	vector<Move> movable_cases(Side side) const {
+		vector<Move> result;
 
 		for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
 			for (File file = FILE_A; file <= FILE_H; ++file) {
@@ -102,7 +106,7 @@ public:
 				else
 					continue;
 
-				vector<Board> add;
+				vector<Move> add;
 				//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
 				//	달리 구현하여 실행 및 변수 add에 대입한다.
 				switch (get_piece(src_crd)) {
@@ -130,7 +134,7 @@ public:
 	/// </summary>
 	void print() const {
 		using std::cout;
-		cout << "\n+---+---+---+---+---+---+---+---+\n";
+		cout << "+---+---+---+---+---+---+---+---+\n";
 		for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
 			for (File file = FILE_A; file <= FILE_H; ++file) {
 				cout << "| " << get_piece(Coord(rank, file)) << " ";
@@ -138,6 +142,49 @@ public:
 			cout << "|\n+---+---+---+---+---+---+---+---+\n";
 		}
 		cout << "\n";
+	}
+
+	/// <summary>
+	/// 기물 수 판정의 더 편한 디버그를 위한 함수이다.
+	/// <para> Board에서 어떤 움직임이 발생하는지 색을 입혀서 순서대로 보여준다. </para>
+	/// <para> 백은 흰색, 흑은 회색으로 표시된다. </para>
+	/// <para> 기물의 위치와 움직일 위치는 파란색으로 표시된다. </para>
+	/// <para> 스페이스 키를 눌러 다음으로 넘어간다. </para>
+	/// </summary>
+	void print_movable_cases(Side side) const {
+		using std::cout;
+		const std::function<void(int)> set_color = [](int color) {
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+			};
+
+		system("cls");
+		vector<Move> moves = movable_cases(side);
+		for (Move move : moves) {
+			cout << "+---+---+---+---+---+---+---+---+\n";
+			for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
+				for (File file = FILE_A; file <= FILE_H; ++file) {
+					cout << "|";
+					if (move.src_crd.rank == rank &&
+						move.src_crd.file == file ||
+						move.dst_crd.rank == rank &&
+						move.dst_crd.file == file)
+						set_color(0x30);
+					else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
+					else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
+					cout << " " << get_piece(Coord(rank, file)) << " ";
+					set_color(0x07);
+				}
+				cout << "|\n+---+---+---+---+---+---+---+---+\n";
+			}
+			cout << "\n";
+
+			while (true) {
+				char order = _getch();
+				if (order == ' ')
+					break;
+			}
+			system("cls");
+		}
 	}
 
 private:
@@ -200,17 +247,16 @@ private:
 	/// <param name="src_crd"> 현재 왕의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board> movable_k(Coord src_crd, Side side) const {
-		vector<Board> result;
-		const int move_r[8] = { 1, 1, 1, 0, 0,-1,-1,-1 };
-		const int move_f[8] = { 1, 0,-1, 1,-1, 1, 0,-1 };
+	inline vector<Move> movable_k(Coord src_crd, Side side) const {
+		vector<Move> result;
+		const int move_r[8] = {  1, 1, 1, 0, 0,-1,-1,-1 };
+		const int move_f[8] = { -1, 0, 1,-1, 1,-1, 0, 1 };
 		for (int i = 0; i < 8; ++i) {
 			Coord dst_crd = Coord(
 				src_crd.rank + move_r[i],
 				src_crd.file + move_f[i]);
 			if (is_on_board(dst_crd) && movable_piece_to(dst_crd, side)) {
-					Board potential_board = move_piece_to(src_crd, dst_crd);
-					result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
 				}
 			}
 		return result;
@@ -222,10 +268,10 @@ private:
 	/// <param name="src_crd"> 현재 퀸의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board>& movable_q(Coord src_crd, Side side) const {
-		vector<Board> result;
-		vector<Board> b_movable = movable_b(src_crd, side);
-		vector<Board> r_movable = movable_r(src_crd, side);
+	inline vector<Move> movable_q(Coord src_crd, Side side) const {
+		vector<Move> result;
+		vector<Move> b_movable = movable_b(src_crd, side);
+		vector<Move> r_movable = movable_r(src_crd, side);
 		result.insert(result.end(), b_movable.begin(), b_movable.end());
 		result.insert(result.end(), r_movable.begin(), r_movable.end());
 		return result;
@@ -237,22 +283,14 @@ private:
 	/// <param name="src_crd"> 현재 룩의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board> movable_r(Coord src_crd, Side side) const {
-		vector<Board> result;
+	inline vector<Move> movable_r(Coord src_crd, Side side) const {
+		vector<Move> result;
 		for (Rank rank = src_crd.rank + 1; rank <= RANK_8; ++rank) {
 			Coord dst_crd = Coord(rank, src_crd.file);
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
-			else
-				break;
-		}
-		for (Rank rank = src_crd.rank - 1; rank >= RANK_1; --rank) {
-			Coord dst_crd = Coord(rank, src_crd.file);
-			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
@@ -260,8 +298,19 @@ private:
 		for (File file = src_crd.file + 1; file <= FILE_H; ++file) {
 			Coord dst_crd = Coord(src_crd.rank, file);
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
+			}
+			else
+				break;
+		}
+		for (Rank rank = src_crd.rank - 1; rank >= RANK_1; --rank) {
+			Coord dst_crd = Coord(rank, src_crd.file);
+			if (movable_piece_to(dst_crd, side)) {
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
@@ -269,8 +318,9 @@ private:
 		for (File file = src_crd.file - 1; file >= FILE_A; --file) {
 			Coord dst_crd = Coord(src_crd.rank, file);
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
@@ -284,36 +334,40 @@ private:
 	/// <param name="src_crd"> 현재 비숍의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board> movable_b(Coord src_crd, Side side) const {
-		vector<Board> result;
-		for (Coord dst_crd{ src_crd.rank + 1, src_crd.file + 1 }; is_on_board(dst_crd); ++dst_crd.rank, ++dst_crd.file) {
-			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
-			else
-				break;
-		}
+	inline vector<Move> movable_b(Coord src_crd, Side side) const {
+		vector<Move> result;
 		for (Coord dst_crd{ src_crd.rank + 1, src_crd.file - 1 }; is_on_board(dst_crd); ++dst_crd.rank, --dst_crd.file) {
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
 		}
-		for (Coord dst_crd{ src_crd.rank - 1, src_crd.file + 1 }; is_on_board(dst_crd); --dst_crd.rank, ++dst_crd.file) {
+		for (Coord dst_crd{ src_crd.rank + 1, src_crd.file + 1 }; is_on_board(dst_crd); ++dst_crd.rank, ++dst_crd.file) {
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
 		}
 		for (Coord dst_crd{ src_crd.rank - 1, src_crd.file - 1 }; is_on_board(dst_crd); --dst_crd.rank, --dst_crd.file) {
 			if (movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
+			}
+			else
+				break;
+		}
+		for (Coord dst_crd{ src_crd.rank - 1, src_crd.file + 1 }; is_on_board(dst_crd); --dst_crd.rank, ++dst_crd.file) {
+			if (movable_piece_to(dst_crd, side)) {
+				result.push_back(Move(src_crd, dst_crd));
+				if (get_side(dst_crd) != EMPTY)
+					break;
 			}
 			else
 				break;
@@ -327,17 +381,16 @@ private:
 	/// <param name="src_crd"> 현재 나이트의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board> movable_n(Coord src_crd, Side side) const {
-		vector<Board> result;
-		const int move_r[8] = { 1, 1,-1,-1, 2, 2,-2,-2 };
-		const int move_f[8] = { 2,-2, 2,-2, 1,-1, 1,-1 };
+	inline vector<Move> movable_n(Coord src_crd, Side side) const {
+		vector<Move> result;
+		const int move_r[8] = {  2, 2, 1,-1,-2,-2,-1, 1, };
+		const int move_f[8] = { -1, 1, 2, 2, 1,-1,-2,-2, };
 		for (int i = 0; i < 8; ++i) {
 			Coord dst_crd = Coord(
 				src_crd.rank + move_r[i],
 				src_crd.file + move_f[i]);
 			if (is_on_board(dst_crd) && movable_piece_to(dst_crd, side)) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
 			}
 		}
 		return result;
@@ -349,59 +402,45 @@ private:
 	/// <param name="src_crd"> 현재 폰의 좌표 </param>
 	/// <param name="is_white_side"> 진영 </param>
 	/// <returns> 가능한 움직임의 목록 </returns>
-	inline vector<Board> movable_p(Coord src_crd, Side side) const {
-		vector<Board> result;
+	inline vector<Move> movable_p(Coord src_crd, Side side) const {
+		vector<Move> result;
 		if (side == WHITE) {
 			Coord dst_crd = Coord(src_crd.rank + 1, src_crd.file);
 			if (get_side(dst_crd) == EMPTY) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
 
 				if (src_crd.rank == RANK_2) {
 					++dst_crd.rank;
-					if (get_side(dst_crd) == EMPTY) {
-						Board potential_board = move_piece_to(src_crd, dst_crd);
-						result.push_back(potential_board);
-					}
+					if (get_side(dst_crd) == EMPTY)
+						result.push_back(Move(src_crd, dst_crd));
 				}
 			}
 
 			dst_crd = Coord(src_crd.rank + 1, src_crd.file + 1);
-			if (is_on_board(dst_crd) && get_side(dst_crd) == !side) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
+			if (is_on_board(dst_crd) && get_side(dst_crd) == !side)
+				result.push_back(Move(src_crd, dst_crd));
 			dst_crd = Coord(src_crd.rank + 1, src_crd.file - 1);
-			if (is_on_board(dst_crd) && get_side(dst_crd) == !side) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
+			if (is_on_board(dst_crd) && get_side(dst_crd) == !side)
+				result.push_back(Move(src_crd, dst_crd));
 		}
 		else {
 			Coord dst_crd = Coord(src_crd.rank - 1, src_crd.file);
 			if (get_side(dst_crd) == EMPTY) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
+				result.push_back(Move(src_crd, dst_crd));
 
 				if (src_crd.rank == RANK_7) {
 					--dst_crd.rank;
-					if (get_side(dst_crd) == EMPTY) {
-						Board potential_board = move_piece_to(src_crd, dst_crd);
-						result.push_back(potential_board);
-					}
+					if (get_side(dst_crd) == EMPTY)
+						result.push_back(Move(src_crd, dst_crd));
 				}
 			}
 
 			dst_crd = Coord(src_crd.rank - 1, src_crd.file + 1);
-			if (is_on_board(dst_crd) && get_side(dst_crd) == !side) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
+			if (is_on_board(dst_crd) && get_side(dst_crd) == !side)
+				result.push_back(Move(src_crd, dst_crd));
 			dst_crd = Coord(src_crd.rank - 1, src_crd.file - 1);
-			if (is_on_board(dst_crd) && get_side(dst_crd) == !side) {
-				Board potential_board = move_piece_to(src_crd, dst_crd);
-				result.push_back(potential_board);
-			}
+			if (is_on_board(dst_crd) && get_side(dst_crd) == !side)
+				result.push_back(Move(src_crd, dst_crd));
 		}
 		return result;
 	}
