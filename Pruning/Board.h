@@ -12,6 +12,10 @@
 using std::string;
 using std::vector;
 
+
+/// <summary>
+/// 체스 보드를 저장하는 구조체. 64개의 char을 저장한다
+/// </summary>
 class Board {
 public:
 	Board() {
@@ -40,11 +44,22 @@ public:
 		}
 	}
 	
-	void set_on(Coord coord, char piece) {
+	/// <summary>
+	/// 특정 위치에 기물을 놓음
+	/// <param name = 'coord'> Coord: 좌표(파일(열)과 랭크(행)) </param>
+	/// <param name = 'piece'> char: 위치할 기물 </param>
+	/// </summary>
+	void set_on(Coord coord, char piece) { 
 		board[8 * coord.rank + coord.file] = piece;
 	}
-	char get_on(Coord coord) const {
-		return board[8 * coord.rank + coord.file];
+
+	/// <summary>
+	/// 특정 위치의 위치 가져오기
+	///<param name = 'coord'> Coord: 좌표(파일(열)과 랭크(행)) </param>
+	///</summary>
+	/// <returns>Array의 index</returns>
+	char get_on(Coord coord) const { 
+		return board[8 * coord.rank + coord.file]; //64칸중 랭크는 8의 배수.1랭크 올라갈 때마다 64칸 Array에서 index는 8 증가.(E.g | e파일 4랭크는 5행 4열 ( 5+4*8 ))
 	}
 
 	//일단은 Board로 만들고 있으나, 추후에는 FEN와 호환되도록 할 것이다.
@@ -59,8 +74,8 @@ public:
 					continue;
 
 				vector<Board> add;
-				//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
-				//	달리 구현하여 실행 및 변수 add에 대입한다.
+				//놓인 말의 종류에 따라 움직임 경우의 수를 계산하는 함수를
+				//달리 구현하여 실행 및 변수 add에 대입한다.
 				switch (get_on(src_crd)) {
 				case 'K': { add = movable_k(src_crd, is_white_side); break; }
 				case 'Q': { add = movable_q(src_crd, is_white_side); break; }
@@ -77,7 +92,9 @@ public:
 		return result;
 	}
 
-	//! 디버그용
+	/// <summary>
+	/// 디버그용 함수
+	/// </summary>
 	void print() const {
 		using std::cout;
 		cout << "\n+---+---+---+---+---+---+---+---+\n";
@@ -119,6 +136,12 @@ private:
 	}
 	//dst_crd의 위치에 기물이 위치할 수 있는지 판별하는 함수
 	//is_white_side와 같은 진영의 말이 존재하지 않는 경우 true를 반환한다.
+	/// <summary>
+	/// 기물의 움직임 가능 여부 판별 함수.
+	/// </summary>
+	/// <param name="dst_crd">목표로 하는 좌표</param>
+	/// <param name="is_white_side">흑/백</param>
+	/// <returns>Boolean (True/False)</returns>
 	inline bool movable_piece_to(const Coord& dst_crd, bool is_white_side) const {
 		if (get_on(dst_crd) == ' ' ||
 			is_white(dst_crd) != is_white_side)
@@ -128,6 +151,13 @@ private:
 	}
 	//위의 movable_to()가 true임을 전제로 사용한다.
 	//src_crd의 기물을 dst_crd의 위치에 이동시킨 보드를 반환한다.
+
+	/// <summary>
+	/// movable_to()의 여부에 따라 가능한 보드의 경우(Potential_board)를 반환한다
+	/// </summary>
+	/// <param name="src_crd">원래 기물의 위치</param>
+	/// <param name="dst_crd">목표 기물의 위치</param>
+	/// <returns>Board type의 객체</returns>
 	inline Board& move_piece_to(const Coord& src_crd, const Coord& dst_crd) const {
 		Board potential_board = *this;
 		potential_board.set_on(dst_crd, potential_board.get_on(src_crd));
@@ -135,6 +165,12 @@ private:
 		return potential_board;
 	}
 	 
+	/// <summary>
+	/// 왕의 움직일 수 있는 좌표를 계산.
+	/// </summary>
+	/// <param name="src_crd">현재 왕의 좌표</param>
+	/// <param name="is_white_side">백/흑 구분 bool</param>
+	/// <returns>가능한 움직임의 Board Array</returns>
 	inline vector<Board>& movable_k(Coord src_crd, bool is_white_side) const {
 		vector<Board> result;
 		for (int move_r = -1; move_r <= 1; ++move_r) {
@@ -148,6 +184,13 @@ private:
 		}
 		return result;
 	}
+
+	/// <summary>
+	/// 퀸의 움직일 수 있는 좌표를 계산.
+	/// </summary>
+	/// <param name="src_crd">현재 퀸의 좌표</param>
+	/// <param name="is_white_side">백/흑 구분 bool</param>
+	/// <returns>가능한 움직임의 Board Array</returns>
 	inline vector<Board>& movable_q(Coord src_crd, bool is_white_side) const {
 		vector<Board> result;
 		vector<Board> b_movable = movable_b(src_crd, is_white_side);
@@ -156,6 +199,13 @@ private:
 		result.insert(result.end(), r_movable.begin(), r_movable.end());
 		return result;
 	}
+
+	/// <summary>
+	/// 룩의 움직일 수 있는 좌표를 계산.
+	/// </summary>
+	/// <param name="src_crd">현재 룩의 좌표</param>
+	/// <param name="is_white_side">백/흑 구분 bool</param>
+	/// <returns>가능한 움직임의 Board Array</returns>
 	inline vector<Board>& movable_r(Coord src_crd, bool is_white_side) const {
 		vector<Board> result;
 		for (Rank rank = Rank(src_crd.rank + 1); rank <= RANK_8; ++rank) {
@@ -196,6 +246,13 @@ private:
 		}
 		return result;
 	}
+
+	/// <summary>
+	/// 비숍의 움직일 수 있는 좌표를 계산.
+	/// </summary>
+	/// <param name="src_crd">현재 비숍의 좌표</param>
+	/// <param name="is_white_side">백/흑 구분 bool</param>
+	/// <returns>가능한 움직임의 Board Array</returns>
 	inline vector<Board>& movable_b(Coord src_crd, bool is_white_side) const {
 		vector<Board> result;
 		Rank rank;
@@ -234,6 +291,13 @@ private:
 		}
 		return result;
 	}
+
+	/// <summary>
+	/// 나이트의 움직일 수 있는 좌표를 계산.
+	/// </summary>
+	/// <param name="src_crd">현재 나이트의 좌표</param>
+	/// <param name="is_white_side">백/흑 구분 bool</param>
+	/// <returns>가능한 움직임의 Board Array</returns>
 	inline vector<Board>& movable_n(Coord src_crd, bool is_white_side) const {
 		vector<Board> result;
 		const Coord move_rf[] = { //이렇게 -1이 버젓이 존재하는 것을 명백히 올바르지 않은 사용이긴 하다.

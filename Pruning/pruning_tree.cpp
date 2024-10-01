@@ -2,9 +2,7 @@
 #include "Board.h"
 
 int main(void) {
-	printf("Hello world!\n");
-	printf("TEST2\n");
-	return 0;
+	
 
 
 
@@ -16,5 +14,7 @@ int main(void) {
 	a.print();
 
 	b.set_on(Coord(RANK_8, FILE_A), ' ');
+	b.print();
 	a.print();
+	return 0;
 }

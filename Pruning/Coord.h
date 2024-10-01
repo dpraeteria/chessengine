@@ -18,6 +18,14 @@ enum File : char {
 inline File& operator++(File& rank) { return rank = File((char)rank + 1); }
 inline File& operator--(File& rank) { return rank = File((char)rank - 1); }
 
+
+/// <summary>
+/// 행과 열을 좌표화시킴.
+/// <remark>
+/// Rank = 행,
+/// File = 열
+/// </remark>
+/// </summary>
 struct Coord {
 	Rank rank; //행을 의미하며, 숫자로 표현된다.
 	File file; //열을 의미하며, 알파벳으로 표현된다.
