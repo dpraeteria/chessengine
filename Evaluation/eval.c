@@ -1,6 +1,6 @@
 
 
-// ç„¼æŽ˜äºº æ—­æˆš ç´«é‚é¦¬æªŽ å–« ã—ã—
+// ¾Æ·¡¿Í °°ÀÌ »ç¿ëÇÏ¸é µÊ ¤·¤·
 // ex) eval("r2qkb1r/pp3ppp/2n1pn2/2pp1b2/3P1B2/2P1PN2/PP1N1PPP/R2QKB1R"));
 
 #include <string.h>
