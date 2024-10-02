@@ -10,10 +10,30 @@ using std::vector;
 
 class Node {
 public:
-	;
+	Node() {
+		last_move = Move();
+		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+		par = nullptr;
+	}
+	~Node() {
+		for (auto& ptr : cld) {
+			ptr->~Node();
+			delete ptr;
+		}
+	}
+
+	string get_fen() {
+		return fen;
+	}
+	vector<Node*> get_cld() {
+		return cld;
+	}
+	bool is_leaf() {
+		return cld.size() == 0;
+	}
 
 private:
-	Move last_move;
+	Move last_move; //이거 쓸모없을 확률이 높다. 그럼 나중에 지우는걸로.
 	string fen;
 
 	Node* par;

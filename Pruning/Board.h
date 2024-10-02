@@ -45,7 +45,7 @@ public:
 				++file;
 			}
 			else if (isdigit(c)) {
-				file = (File)(file + c - '0');	//file += c - '0'
+				file = (File)(file + (c - '0'));	//file += c - '0'
 			}
 			rank = (Rank)(rank - file / 8);		//rank += file / 8;
 			file = (File)(file % 8);			//file %= 8;
@@ -110,12 +110,12 @@ public:
 				//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
 				//	달리 구현하여 실행 및 변수 add에 대입한다.
 				switch (get_piece(src_crd)) {
-				case 'K': { add = movable_k(src_crd, side); break; }
-				case 'Q': { add = movable_q(src_crd, side); break; }
-				case 'R': { add = movable_r(src_crd, side); break; }
-				case 'B': { add = movable_b(src_crd, side); break; }
-				case 'N': { add = movable_n(src_crd, side); break; }
-				case 'P': { add = movable_p(src_crd, side); break; }
+				case 'K': case 'k': { add = movable_k(src_crd, side); break; }
+				case 'Q': case 'q': { add = movable_q(src_crd, side); break; }
+				case 'R': case 'r': { add = movable_r(src_crd, side); break; }
+				case 'B': case 'b': { add = movable_b(src_crd, side); break; }
+				case 'N': case 'n': { add = movable_n(src_crd, side); break; }
+				case 'P': case 'p': { add = movable_p(src_crd, side); break; }
 				}
 				//add의 요소들은 result에 추가된다.
 				result.insert(result.end(),
@@ -157,9 +157,9 @@ public:
 			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 			};
 
-		system("cls");
 		vector<Move> moves = movable_cases(side);
 		for (Move move : moves) {
+			system("cls");
 			cout << "+---+---+---+---+---+---+---+---+\n";
 			for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
 				for (File file = FILE_A; file <= FILE_H; ++file) {
@@ -183,7 +183,6 @@ public:
 				if (order == ' ')
 					break;
 			}
-			system("cls");
 		}
 	}
 
