@@ -9,29 +9,29 @@
 #include "defs.h"
 
 
-/* the board representation */
+ /* the board representation */
 int color[64];  /* LIGHT, DARK, or EMPTY */
 int piece[64];  /* PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, or EMPTY */
 int side;  /* the side to move */
 int xside;  /* the side not to move */
 int castle;  /* a bitfield with the castle permissions. if 1 is set,
-                white can still castle kingside. 2 is white queenside.
+				white can still castle kingside. 2 is white queenside.
 				4 is black kingside. 8 is black queenside. */
 int ep;  /* the en passant square. if white moves e2e4, the en passant
-            square is set to e3, because that's where a pawn would move
+			square is set to e3, because that's where a pawn would move
 			in an en passant capture */
 int fifty;  /* the number of moves since a capture or pawn move, used
-               to handle the fifty-move-draw rule */
+			   to handle the fifty-move-draw rule */
 int hash;  /* a (more or less) unique number that corresponds to the
-              position */
+			  position */
 int ply;  /* the number of half-moves (ply) since the
-             root of the search tree */
+			 root of the search tree */
 int hply;  /* h for history; the number of ply since the beginning
-              of the game */
+			  of the game */
 
-/* gen_dat is some memory for move lists that are created by the move
-   generators. The move list for ply n starts at first_move[n] and ends
-   at first_move[n + 1]. */
+			  /* gen_dat is some memory for move lists that are created by the move
+				 generators. The move list for ply n starts at first_move[n] and ends
+				 at first_move[n + 1]. */
 gen_t gen_dat[GEN_STACK];
 int first_move[MAX_PLY];
 

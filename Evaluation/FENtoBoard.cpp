@@ -7,8 +7,8 @@
 #include "protos.h"
 
 #define SIZE 64
-side = LIGHT;
-xside = DARK;
+//side = LIGHT;
+//xside = DARK;
 
 // Function prototypes
 
@@ -84,23 +84,23 @@ void FENToBoard(const char* fen) {
 
 void print_board()
 {
-	int i;
-	
-	printf("\n8 ");
-	for (i = 0; i < 64; ++i) {
-		switch (color[i]) {
-			case EMPTY:
-				printf(" .");
-				break;
-			case LIGHT:
-				printf(" %c", piece_char[piece[i]]);
-				break;
-			case DARK:
-				printf(" %c", piece_char[piece[i]] + ('a' - 'A'));
-				break;
-		}
-		if ((i + 1) % 8 == 0 && i != 63)
-			printf("\n%d ", 7 - ROW(i));
-	}
-	printf("\n\n   a b c d e f g h\n\n");
+    int i;
+
+    printf("\n8 ");
+    for (i = 0; i < 64; ++i) {
+        switch (color[i]) {
+        case EMPTY:
+            printf(" .");
+            break;
+        case LIGHT:
+            printf(" %c", piece_char[piece[i]]);
+            break;
+        case DARK:
+            printf(" %c", piece_char[piece[i]] + ('a' - 'A'));
+            break;
+        }
+        if ((i + 1) % 8 == 0 && i != 63)
+            printf("\n%d ", 7 - ROW(i));
+    }
+    printf("\n\n   a b c d e f g h\n\n");
 }
