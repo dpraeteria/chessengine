@@ -51,8 +51,13 @@ struct Coord {
 	Coord() : rank(RANK_NON), file(FILE_NON) {}
 	Coord(Rank rank, File file)
 		: rank(rank), file(file) {}
-	Coord(char rank, char file)
-		: rank(Rank(rank)), file(File(file)) {}
+	bool operator==(Coord other) const {
+		if (rank == other.rank &&
+			file == other.file)
+			return true;
+		else
+			return false;
+	}
 };
 
 #endif // !COORD_H_INCLUDED

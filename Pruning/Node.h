@@ -11,15 +11,21 @@ using std::vector;
 class Node {
 public:
 	Node() {
-		last_move = Move();
-		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-		par = nullptr;
+		*this = Node(Move(), "8/8/8/8/8/8/8/8");
 	}
-	~Node() {
+	Node(Move move, string fen)
+		: last_move(move), fen(fen) {}
+	/// <summary>
+	/// Node의 소멸자.
+	/// <para>
+	///		실행하면 자식으로 가지고 있는 Node까지 모두 소멸시킨다.
+	/// </para>
+	/// </summary>
+	~Node() { //올바르게 동작하는지에 대해서는 검증 필요.
 		for (auto& ptr : cld) {
 			ptr->~Node();
-			delete ptr;
 		}
+		delete this;
 	}
 
 	string get_fen() {
@@ -28,15 +34,11 @@ public:
 	vector<Node*> get_cld() {
 		return cld;
 	}
-	bool is_leaf() {
-		return cld.size() == 0;
-	}
 
 private:
 	Move last_move; //이거 쓸모없을 확률이 높다. 그럼 나중에 지우는걸로.
 	string fen;
 
-	Node* par;
 	vector<Node*> cld;
 };
 

@@ -12,12 +12,18 @@
 /// </para>
 /// </summary>
 struct Move {
-	Coord src_crd;
-	Coord dst_crd;
-
-	Move() : src_crd(), dst_crd() {}
+	Coord src;
+	Coord dst;
+	Move() : src(), dst() {}
 	Move(Coord src_crd, Coord dst_crd)
-		: src_crd(src_crd), dst_crd(dst_crd) {}
+		: src(src_crd), dst(dst_crd) {}
+	bool operator=(Move other) const {
+		if (src == other.src &&
+			dst == other.dst)
+			return true;
+		else
+			return false;
+	}
 };
 
 #endif // !MOVE_H_INCLUDED
