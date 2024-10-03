@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include "Board.h"
 #include "Move.h"
 using std::string;
 using std::vector;
@@ -11,7 +12,7 @@ using std::vector;
 class Node {
 public:
 	Node() {
-		*this = Node(Move(), "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0");
+		*this = Node(Move(), default_fen);
 	}
 	Node(Move move, string fen)
 		: last_move(move), fen(fen) {}

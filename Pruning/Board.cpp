@@ -201,49 +201,145 @@ vector<Move> Board::movable_cases(Side side) const {
 }
 
 
-void Board::print() const {
-	using std::cout;
-	cout << "+---+---+---+---+---+---+---+---+\n";
-	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-		for (File file = FILE_A; file <= FILE_H; ++file) {
-			cout << "| " << get_piece(Coord(rank, file)) << " ";
-		}
-		cout << "|\n+---+---+---+---+---+---+---+---+\n";
-	}
-	cout << "\n";
-}
-void Board::print_movable_cases(Side side) const {
+void Board::print(Move move) const {
 	using std::cout;
 	const std::function<void(int)> set_color = [](int color) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 		};
 
+	system("cls");
+	cout << "     A   B   C   D   E   F   G   H     \n";
+	cout << "   +---+---+---+---+---+---+---+---+   \n";
+	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
+		cout << ' ' << char('1' + rank) << ' ';
+		for (File file = FILE_A; file <= FILE_H; ++file) {
+			cout << "|";
+			Coord coord = Coord(rank, file);
+			if (false);
+			else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
+			else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
+			if (turn == WHITE) {
+				if (move.src == coord) set_color(0x30);
+				if (move.dst == coord) set_color(0x10);
+			}
+			if (turn == BLACK) {
+				if (move.src == coord) set_color(0x50);
+				if (move.dst == coord) set_color(0xC0);
+			}
+			cout << " " << get_piece(Coord(rank, file)) << " ";
+			set_color(0x07);
+		}
+		cout << "| " << char('1' + rank) << " \n";
+		cout << "   +---+---+---+---+---+---+---+---+   \n";
+	}
+	cout << "     A   B   C   D   E   F   G   H     \n";
+	cout << "\n";
+
+	string fen = to_fen();
+	int space_idx = fen.find(' ');
+	cout << fen.substr(0, space_idx) << '\n';
+	cout << fen.substr(space_idx + 1) << '\n';
+}
+void Board::print_movable_cases(Side side) const {
 	vector<Move> moves = movable_cases(side);
 	for (Move move : moves) {
-		system("cls");
-		cout << "+---+---+---+---+---+---+---+---+\n";
-		for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-			for (File file = FILE_A; file <= FILE_H; ++file) {
-				cout << "|";
-				if (move.src.rank == rank &&
-					move.src.file == file ||
-					move.dst.rank == rank &&
-					move.dst.file == file)
-					set_color(0x30);
-				else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
-				else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
-				cout << " " << get_piece(Coord(rank, file)) << " ";
-				set_color(0x07);
-			}
-			cout << "|\n+---+---+---+---+---+---+---+---+\n";
-		}
-		cout << "\n";
+		print(move);
 
 		while (true) {
 			char order = _getch();
 			if (order == ' ')
 				break;
 		}
+	}
+}
+void Board::GAME(string fen) {
+	Board board = Board(fen);
+	char order;
+
+	std::function<char()> get_order = []() {
+		unsigned char order = _getch();
+		if (order == 224) {
+			order = _getch();
+		}
+		return order;
+		};
+	std::function<void(Coord&)> move = [&order](Coord& crd) {
+		switch (order) {
+		case 'W': case 'w':
+			if (crd.rank < RANK_8) ++crd.rank; break;
+		case 'A': case 'a': if (crd.file > FILE_A) --crd.file; break;
+		case 'S': case 's':
+			if (crd.rank > RANK_1) --crd.rank; break;
+		case 'D': case 'd': if (crd.file < FILE_H) ++crd.file; break;
+		}
+		};
+
+	while (true) {
+		Coord src = Coord(), dst = Coord();
+		board.print();
+
+#pragma region src input
+		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
+		game_src_cancel:
+		order = '\0';
+		while (order != ' ') {
+			board.print(Move(src, dst));
+			order = get_order();
+			move(src);
+			if (order == 'Q' || order == 'q');
+			else if (order == 27)	return;
+		}
+#pragma endregion
+#pragma region src check legal
+		if (board.get_side(src) != board.turn) {
+			std::cout << "잘못된 진영을 선택했습니다." << '\n';
+			std::cout << "올바른 진영의 기물을 선택해 주세요" << '\n';
+			_getch();
+			goto game_src_cancel;
+		}
+#pragma endregion
+
+#pragma region dst input
+		dst = src;
+		game_dst_cancel:
+		order = '\0';
+		while (order != ' ') {
+			board.print(Move(src, dst));
+			order = get_order();
+			move(dst);
+			if (order == 'Q' || order == 'q') {
+				dst = Coord();
+				goto game_src_cancel;
+			}
+			else if (order == 27)	return;
+		}
+#pragma endregion
+#pragma region dst check legal
+		vector<Move> moves;
+		switch (board.get_piece(src)) {
+		case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
+		case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
+		case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
+		case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
+		case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
+		case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
+		}
+		bool is_move_legal = false;
+		for (Move move : moves) {
+			if (move.dst == dst) {
+				is_move_legal = true;
+				break;
+			}
+		}
+		if (!is_move_legal) {
+			std::cout << "잘못된 위치를 선택했습니다." << '\n';
+			std::cout << "이 기물은 선택하신 위치로 이동할 수 없습니다." << '\n';
+			_getch();
+			goto game_dst_cancel;
+		}
+#pragma endregion
+
+		board.apply_move(Move(src, dst));
 	}
 }
 
@@ -331,6 +427,13 @@ void Board::apply_move(Move move) {
 			castling_k = false;
 			castling_q = false;
 		}
+	}
+	//앙파상 적용
+	if (en_passant == move.dst) {
+		if (en_passant.rank == RANK_3)
+			set_piece(Coord(RANK_2, en_passant.file), ' ');
+		if (en_passant.rank == RANK_6);
+			set_piece(Coord(RANK_5, en_passant.file), ' ');
 	}
 #pragma endregion
 #pragma region after move

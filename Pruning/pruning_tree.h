@@ -2,7 +2,6 @@
 #ifndef PRUNING_TREE_H_INCLUDED
 #define PRUNING_TREE_H_INCLUDED
 
-#include <vector>
 #include <limits>
 #include "../Evaluation/protos.h"
 #include "Board.h"
@@ -10,22 +9,37 @@
 
 class PruningTree {
 public:
-    //초기화
+    /// <summary>
+    /// 가지치기 트리를 초기화하는 역할을 한다.
+    /// <para>
+    ///     생성자와 동일한 역할을 하나,
+    ///     root가 포인터이기에 별도의 함수를 사용하도록 한다.
+    /// </para>
+    /// </summary>
     void init() {
         root = new Node();
     }
 
-    //다음 최적의 수 반환
+    /// <summary>
+    /// 다음에 이어질 최적의 수를 반환한다.
+    /// </summary>
+    /// <returns> 계산된 최적의 수 </returns>
     Move get_nxt_move() {
+        //미완
         return Move();
     }
 
-    //현재 상대의 수 입력
+    /// <summary>
+    /// 상대가 어떤 수를 두었는지를 입력받는다.
+    /// </summary>
+    /// <param name="move"> 상대가 둔 수 </param>
     void set_new_move(Move move) {
-        ;
+        //미완
     }
 
-    //종료
+    /// <summary>
+    /// 가지치기 트리에 할당된 모든 메모리를 해제한다.
+    /// </summary>
     void release() {
         root->~Node();
     }
@@ -43,7 +57,7 @@ private:
         if (depth == 0 || moves.size() == 0)
             return eval(fen.c_str()); //평가함수 값 반환을 내장시키는 것 고려
 
-        constexpr auto inf = std::numeric_limits<double>::infinity();
+        constexpr auto inf = std::numeric_limits<int>::min();
         if (max_player == WHITE) {
             int v = -inf;
             //단순히 move에 의한 것들을 계산하는 대신, node가 이미 가지고 있는 자식들도 사용해야 한다.

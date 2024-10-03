@@ -9,6 +9,8 @@
 using std::string;
 using std::vector;
 
+const string default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
+
 enum Side : char { WHITE, BLACK, EMPTY, GREY/*check 함수에서만 사용한다.*/ };
 
 /// <summary>
@@ -53,15 +55,34 @@ public:
 	///		왼쪽 위가 a8, 오른쪽 아래가 h1이다.
 	/// </para>
 	/// </summary>
-	void print() const;
+	void print(Move move = Move(Coord(), Coord())) const;
 	/// <summary>
 	/// 기물 수 판정의 더 편한 디버그를 위한 함수이다.
 	/// <para> Board에서 어떤 움직임이 발생하는지 색을 입혀서 순서대로 보여준다. </para>
 	/// <para> 백은 흰색, 흑은 회색으로 표시된다. </para>
-	/// <para> 기물의 위치와 움직일 위치는 파란색으로 표시된다. </para>
+	/// <para> 기물의 위치는와 움직일 위치는 진영에 따라 달리 표시된다(백:파랑,흑:빨강) </para>
 	/// <para> 스페이스 키를 눌러 다음으로 넘어간다. </para>
 	/// </summary>
 	void print_movable_cases(Side side) const;
+	/// <summary>
+	/// 디버깅용 함수이다.
+	/// <para>
+	///		print()를 이용해 직접 체스 게임을 하며 기능이 잘 구현되었는지 확인할 수 있도록 했다.
+	/// </para>
+	/// 
+	/// <para>
+	///		키의 이동은 WASD로, 좌표의 결정은 SPACE로 이뤄지며,
+	///		Q는 취소, ESC는 종료이다.
+	/// </para>
+	/// <para>
+	///		움직일 기물 선택과 움직일 좌표의 선택이 교대로,
+	///		백과 흑의 차례가 교대로 이뤄진다.
+	/// </para>
+	/// <para>
+	///		입력이 잘못되면 기물 선택부터 다시 해야한다.
+	/// </para>
+	/// </summary>
+	static void GAME(string fen = default_fen);
 
 private:
 	/// <summary>
