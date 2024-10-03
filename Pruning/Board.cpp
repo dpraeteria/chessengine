@@ -236,9 +236,20 @@ void Board::print(Move move) const {
 	cout << "\n";
 
 	string fen = to_fen();
-	int space_idx = fen.find(' ');
-	cout << fen.substr(0, space_idx) << '\n';
-	cout << fen.substr(space_idx + 1) << '\n';
+	cout << fen.substr(0, fen.find(' ')) << '\n';
+	cout << "turn\t\t" << (turn == WHITE ? "WHITE" : "BLACK") << '\n';
+	cout << "castling KQkq\t"
+		<< (castling_K ? '1' : '-') << ' ' << (castling_Q ? '1' : '-') << ' '
+		<< (castling_k ? '1' : '-') << ' ' << (castling_q ? '1' : '-') << ' ' << '\n';
+	cout << "en passant\t";
+	if (en_passant == Coord()) cout << '-';
+	else {
+		cout << char('a' + en_passant.file);
+		cout << char('1' + en_passant.rank);
+	}
+	cout << '\n';
+	cout << "half move\t" << half_move << '\n';
+	cout << "full move\t" << full_move << '\n';
 }
 void Board::print_movable_cases(Side side) const {
 	vector<Move> moves = movable_cases(side);
@@ -292,8 +303,10 @@ void Board::GAME(string fen) {
 #pragma endregion
 #pragma region src check legal
 		if (board.get_side(src) != board.turn) {
+			std::cout << '\n';
 			std::cout << "잘못된 진영을 선택했습니다." << '\n';
-			std::cout << "올바른 진영의 기물을 선택해 주세요" << '\n';
+			std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
+			std::cout << "(Press any button to continue.)" << '\n';
 			_getch();
 			goto game_src_cancel;
 		}
@@ -332,8 +345,10 @@ void Board::GAME(string fen) {
 			}
 		}
 		if (!is_move_legal) {
+			std::cout << '\n';
 			std::cout << "잘못된 위치를 선택했습니다." << '\n';
 			std::cout << "이 기물은 선택하신 위치로 이동할 수 없습니다." << '\n';
+			std::cout << "(Press any button to continue.)" << '\n';
 			_getch();
 			goto game_dst_cancel;
 		}
@@ -374,7 +389,7 @@ inline void Board::move_piece_to(Coord src_crd, Coord dst_crd) {
 	set_piece(dst_crd, move_piece);
 	set_piece(src_crd, ' ');
 }
-void Board::apply_move(Move move) {
+inline void Board::apply_move(Move move) {
 	const char move_piece = get_piece(move.src);
 #pragma region before move
 	//하프무브의 갱신
@@ -432,7 +447,7 @@ void Board::apply_move(Move move) {
 	if (en_passant == move.dst) {
 		if (en_passant.rank == RANK_3)
 			set_piece(Coord(RANK_2, en_passant.file), ' ');
-		if (en_passant.rank == RANK_6);
+		if (en_passant.rank == RANK_6)
 			set_piece(Coord(RANK_5, en_passant.file), ' ');
 	}
 #pragma endregion
@@ -484,7 +499,7 @@ void Board::apply_move(Move move) {
 }
 
 
-//나중에 movable() 참조 없이 돌아가도록 다시 짜 보자.
+//todo : movable() 참조 없이 돌아가도록 구현
 inline Side Board::check() const {
 	Coord w_king;
 	Coord b_king;
@@ -512,7 +527,7 @@ inline Side Board::check() const {
 }
 
 
-//캐슬링 적용
+//todo : 캐슬링 조건 구현
 inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 	vector<Move> result;
 	constexpr int move_r[8] = { 1, 1, 1, 0, 0,-1,-1,-1 };
