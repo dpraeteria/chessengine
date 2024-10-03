@@ -2,8 +2,6 @@
 #include "pruning_tree.h"
 #include "Board.h"
 
-//extern int eval(const char* fen);
-
 int main(void) {
 	//string fens[] = {
 	//	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0",
@@ -36,7 +34,7 @@ int main(void) {
 	
 	입력이 잘못되면 기물 선택부터 다시 시작된다.
 	*/
-	Board::GAME();
+	Board::GAME("4k3/8/8/8/8/8/8/4K2R w K - 0 0");
 
 	return 0;
 }

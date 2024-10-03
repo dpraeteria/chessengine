@@ -235,8 +235,7 @@ void Board::print(Move move) const {
 	cout << "     A   B   C   D   E   F   G   H     \n";
 	cout << "\n";
 
-	string fen = to_fen();
-	cout << fen.substr(0, fen.find(' ')) << '\n';
+	cout << "fen = \"" << to_fen() << "\"\n";
 	cout << "turn\t\t" << (turn == WHITE ? "WHITE" : "BLACK") << '\n';
 	cout << "castling KQkq\t"
 		<< (castling_K ? '1' : '-') << ' ' << (castling_Q ? '1' : '-') << ' '
@@ -268,9 +267,15 @@ void Board::GAME(string fen) {
 	char order;
 
 	std::function<char()> get_order = []() {
-		unsigned char order = _getch();
-		if (order == 224) {
+		char order = _getch();
+		if (order == -32) {
 			order = _getch();
+			switch (order) {
+			case 72: return 'w';
+			case 75: return 'a';
+			case 80: return 's';
+			case 77: return 'd';
+			}
 		}
 		return order;
 		};
@@ -357,6 +362,18 @@ void Board::GAME(string fen) {
 		board.apply_move(Move(src, dst));
 	}
 }
+/*
+	< 특수규칙 상황 커멘트 >
+
+앙파상 : "w ww d ssa www w ds ss wwww dw "
+
+킹사이드 캐슬링 :
+	"dddddddw ww s s ddddddw ww ss s ddddd dw ds s dddddd dww dss s `dddd dd "
+	"ddddddw ww dddddds ss ddddd dwdw ddddd dsds dddddd wwa dddddd ssa `dddd dd "
+
+퀸사이드 캐슬링 : "d wwa s s dw ww ss s dd aw ds s ddw w dss s ddd aw dds s dddd aa "
+
+*/
 
 
 void Board::set_piece(Coord coord, char piece) {
@@ -446,10 +463,12 @@ inline void Board::apply_move(Move move) {
 	//앙파상 적용
 	if (en_passant == move.dst) {
 		if (en_passant.rank == RANK_3)
-			set_piece(Coord(RANK_2, en_passant.file), ' ');
+			set_piece(Coord(RANK_4, en_passant.file), ' ');
 		if (en_passant.rank == RANK_6)
 			set_piece(Coord(RANK_5, en_passant.file), ' ');
 	}
+	//프로모션
+	;
 #pragma endregion
 #pragma region after move
 
@@ -486,7 +505,7 @@ inline void Board::apply_move(Move move) {
 	if (move_piece == 'p' &&
 		move.src.rank == RANK_7 &&
 		move.dst.rank == RANK_5)
-		en_passant = Coord(RANK_3, move.src.file);
+		en_passant = Coord(RANK_6, move.src.file);
 
 	//차례의 전환
 	switch (turn) {
@@ -499,7 +518,34 @@ inline void Board::apply_move(Move move) {
 }
 
 
-//todo : movable() 참조 없이 돌아가도록 구현
+inline bool Board::check(Coord k_crd, Side side) const {
+	for (Move move : __movable_k(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'k' ||
+			side == BLACK && get_piece(move.dst) == 'K')
+			return true;
+
+	for (Move move : movable_r(k_crd, side))
+		if (side == WHITE && (get_piece(move.dst) == 'r' || get_piece(move.dst) == 'q') ||
+			side == BLACK && (get_piece(move.dst) == 'R' || get_piece(move.dst) == 'Q'))
+			return true;
+
+	for (Move move : movable_b(k_crd, side))
+		if (side == WHITE && (get_piece(move.dst) == 'b' || get_piece(move.dst) == 'q') ||
+			side == BLACK && (get_piece(move.dst) == 'B' || get_piece(move.dst) == 'Q'))
+			return true;
+
+	for (Move move : movable_n(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'n' ||
+			side == BLACK && get_piece(move.dst) == 'N')
+			return true;
+
+	for (Move move : movable_p(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'p' ||
+			side == BLACK && get_piece(move.dst) == 'P')
+			return true;
+
+	return false;
+}
 inline Side Board::check() const {
 	Coord w_king;
 	Coord b_king;
@@ -511,13 +557,8 @@ inline Side Board::check() const {
 		}
 	}
 
-	using std::find;
-	bool w_checked = false;
-	bool b_checked = false;
-	vector<Move> w_cases = movable_cases(WHITE);
-	vector<Move> b_cases = movable_cases(BLACK);
-	for (Move w_move : w_cases) if (w_move.dst == b_king) { b_checked = true; break; }
-	for (Move b_move : b_cases) if (b_move.dst == w_king) { w_checked = true; break; }
+	bool w_checked = check(w_king, WHITE);
+	bool b_checked = check(b_king, BLACK);
 
 	if (w_checked && b_checked)
 		return GREY;
@@ -525,13 +566,24 @@ inline Side Board::check() const {
 	else if (b_checked)	return BLACK;
 	else				return EMPTY;
 }
+//좀 더 최적화된 형태로 만들어야 하나...
+inline bool Board::checkmate(Side side) const {
+	vector<Move> moves = movable_cases(side);
+	for (Move move : moves) {
+		Board new_board = make_moved_board(move);
+		Side check_side = new_board.check();
+		if (check_side == side && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
+		else
+			return true;
+	}
+	return false;
+}
 
 
-//todo : 캐슬링 조건 구현
-inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
+inline vector<Move> Board::__movable_k(Coord src_crd, Side side) const {
 	vector<Move> result;
-	constexpr int move_r[8] = { 1, 1, 1, 0, 0,-1,-1,-1 };
-	constexpr int move_f[8] = { -1, 0, 1,-1, 1,-1, 0, 1 };
+	constexpr int move_r[8] = { +1,+1,+1,+0,+0,-1,-1,-1 };
+	constexpr int move_f[8] = { -1,+0,+1,-1,+1,-1,+0,+1 };
 	for (int i = 0; i < 8; ++i) {
 		Coord dst_crd = Coord(
 			src_crd.rank + move_r[i],
@@ -540,41 +592,65 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 			result.push_back(Move(src_crd, dst_crd));
 		}
 	}
-
 	return result;
+}
+inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
+	vector<Move> result;
+
+	vector<Move> __result = __movable_k(src_crd, side);
+	result.insert(result.begin(),
+		__result.begin(), __result.end());
 
 	//캐슬링이 가능할 경우, 캐슬링을 실행한 경우를 추가한다.
 	//주의할 것은, 캐슬링은 킹 뿐만이 아니라 룩까지 움직이는 특수한 규칙이라는 것이다.
 	//또한 이때 캐슬링은 일반적으로 1칸만을 움직이던 킹이 2칸을 움직인다.
 	//	따라서, 캐슬링은 킹이 2칸 움직이는 것을 그대로 넣어 버리면 된다!
 	if (side == WHITE) {
-		if (castling_K) {
-			//조건 달성 확인 - 3번 조건은 체크 함수를 통해 구하면 될 것 같다.(그렇게 하려면 당연히 체크 함수를 다시 만들어야 하겠지만)
+		if (castling_K &&
+			get_side(Coord(RANK_1, FILE_F)) == EMPTY &&
+			get_side(Coord(RANK_1, FILE_G)) == EMPTY &&
+			!check(Coord(RANK_1, FILE_E), side) &&
+			!check(Coord(RANK_1, FILE_F), side) &&
+			!check(Coord(RANK_1, FILE_G), side)) {
 			result.push_back(Move(
 				Coord(RANK_1, FILE_E),
 				Coord(RANK_1, FILE_G)));
 		}
-		if (castling_Q) {
-			//조건 달성 확인
+		if (castling_Q &&
+			get_side(Coord(RANK_1, FILE_C)) == EMPTY &&
+			get_side(Coord(RANK_1, FILE_D)) == EMPTY &&
+			!check(Coord(RANK_1, FILE_C), side) &&
+			!check(Coord(RANK_1, FILE_D), side) &&
+			!check(Coord(RANK_1, FILE_E), side)) {
 			result.push_back(Move(
 				Coord(RANK_1, FILE_E),
 				Coord(RANK_1, FILE_C)));
 		}
 	}
 	else {
-		if (castling_k) {
-			//조건 달성 확인
+		if (castling_k &&
+			get_side(Coord(RANK_8, FILE_F)) == EMPTY &&
+			get_side(Coord(RANK_8, FILE_G)) == EMPTY &&
+			!check(Coord(RANK_8, FILE_E), side) &&
+			!check(Coord(RANK_8, FILE_F), side) &&
+			!check(Coord(RANK_8, FILE_G), side)) {
 			result.push_back(Move(
 				Coord(RANK_8, FILE_E),
 				Coord(RANK_8, FILE_G)));
 		}
-		if (castling_q) {
-			//조건 달성 확인
+		if (castling_q &&
+			get_side(Coord(RANK_8, FILE_C)) == EMPTY &&
+			get_side(Coord(RANK_8, FILE_D)) == EMPTY &&
+			!check(Coord(RANK_8, FILE_C), side) &&
+			!check(Coord(RANK_8, FILE_D), side) &&
+			!check(Coord(RANK_8, FILE_E), side)) {
 			result.push_back(Move(
 				Coord(RANK_8, FILE_E),
 				Coord(RANK_8, FILE_C)));
 		}
 	}
+
+	return result;
 }
 inline vector<Move> Board::movable_q(Coord src_crd, Side side) const {
 	vector<Move> result;
@@ -670,8 +746,8 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 }
 inline vector<Move> Board::movable_n(Coord src_crd, Side side) const {
 	vector<Move> result;
-	constexpr int move_r[8] = { 2, 2, 1,-1,-2,-2,-1, 1, };
-	constexpr int move_f[8] = { -1, 1, 2, 2, 1,-1,-2,-2, };
+	constexpr int move_r[8] = { +2,+2,+1,-1,-2,-2,-1,+1, };
+	constexpr int move_f[8] = { -1,+1,+2,+2,+1,-1,-2,-2, };
 	for (int i = 0; i < 8; ++i) {
 		Coord dst_crd = Coord(
 			src_crd.rank + move_r[i],
@@ -685,10 +761,12 @@ inline vector<Move> Board::movable_n(Coord src_crd, Side side) const {
 inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
 	vector<Move> result;
 	if (side == WHITE) {
+		//한 칸 전진
 		Coord dst_crd = Coord(src_crd.rank + 1, src_crd.file);
 		if (dst_crd.on_board() && get_side(dst_crd) == EMPTY) {
 			result.push_back(Move(src_crd, dst_crd));
 
+			//두 칸 전진 가능할 경우 (한 칸 전진한 상태에서) 한 칸 추가 전진
 			if (src_crd.rank == RANK_2) {
 				++dst_crd.rank;
 				if (get_side(dst_crd) == EMPTY)
@@ -707,10 +785,12 @@ inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
 			result.push_back(Move(src_crd, dst_crd));
 	}
 	else {
+		//한 칸 전진
 		Coord dst_crd = Coord(src_crd.rank - 1, src_crd.file);
 		if (dst_crd.on_board() && get_side(dst_crd) == EMPTY) {
 			result.push_back(Move(src_crd, dst_crd));
 
+			//두 칸 전진 가능할 경우 (한 칸 전진한 상태에서) 한 칸 추가 전진
 			if (src_crd.rank == RANK_7) {
 				--dst_crd.rank;
 				if (get_side(dst_crd) == EMPTY)

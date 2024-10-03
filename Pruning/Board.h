@@ -65,7 +65,7 @@ public:
 	/// </summary>
 	void print_movable_cases(Side side) const;
 	/// <summary>
-	/// 디버깅용 함수이다.
+	/// 디버그용 함수이다.
 	/// <para>
 	///		print()를 이용해 직접 체스 게임을 하며 기능이 잘 구현되었는지 확인할 수 있도록 했다.
 	/// </para>
@@ -83,7 +83,7 @@ public:
 	/// </para>
 	/// </summary>
 	static void GAME(string fen = default_fen);
-
+	
 private:
 	/// <summary>
 	/// 각각의 기물은 FEN 방식을 따라 기록된다.
@@ -181,6 +181,15 @@ private:
 
 
 	/// <summary>
+	/// 킹의 좌표를 받아 체크 상황인지 확인하는 함수이다.
+	/// <para>
+	///		킹의 진영은 상관 없다.
+	/// </para>
+	/// </summary>
+	/// <param name="k_coord"> 킹의 좌표 </param>
+	/// <returns> 좌표 위 킹이 체크 상황이면 참, 아니면 거짓 </returns>
+	inline bool check(Coord k_crd, Side side) const;
+	/// <summary>
 	/// 현재 Board가 체크 상황인지 확인하는 함수이다.
 	/// <para>
 	///		확인하는 과정에서 movable()을 사용하므로, apply_move()에서 참조하도록 한다.
@@ -188,8 +197,14 @@ private:
 	/// </summary>
 	/// <returns> 체크 상태에 놓인 진영을 반환 </returns>
 	inline Side check() const;
+	/// <summary>
+	/// 진영을 받아 해당 진영이 체크메이트 상황인지를 확인하는 함수이다.
+	/// </summary>
+	/// <returns> 진영이 체크메이트면 참, 아니면 거짓 </returns>
+	inline bool checkmate(Side side) const;
 
 
+	inline vector<Move> __movable_k(Coord src_crd, Side side) const;
 	/// <summary>
 	/// 왕이 움직일 수 있는 모든 좌표를 계산해 반환한다.
 	/// </summary>
