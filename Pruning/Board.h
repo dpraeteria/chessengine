@@ -30,11 +30,14 @@ public:
 	/// <returns> FEN 형식의 기물 위치정보 </returns>
 	string to_fen() const;
 	/// <summary>
-	/// Board에 기물의 움직임을 적용한 결과 Board를 반환하는 함수이다.
+	///	move라는 수를 둔 결과의 Board를 반환하는 함수이다.
+	/// <para>
+	///		*this를 복제해 apply_move()를 적용시키는 방식이다.
+	/// </para>
 	/// </summary>
 	/// <param name="move"> 기물의 움직임 </param>
 	/// <returns> 움직임을 적용한 결과 </returns>
-	Board apply_move(Move move) const;
+	Board make_moved_board(Move move) const;
 	/// <summary>
 	/// 현재 Board의 상태에서 진영에 따라 움직일 수 있는 모든 경우를 반환하는 함수이다.
 	/// </summary>
@@ -138,7 +141,7 @@ private:
 	/// <param name="dst_crd"> 확인을 원하는 좌표 </param>
 	/// <param name="side"> 진영 </param>
 	/// <returns> 좌표가 비여있거나 적의 기물이 있으면 참, 아니면 거짓 </returns>
-	inline bool movable_piece_to(const Coord& dst_crd, Side side) const;
+	inline bool movable_piece(const Coord& dst_crd, Side side) const;
 	/// <summary>
 	/// movable_to()가 true임을 전제로 기물의 움직임이 실현된 결과를 반환한다
 	/// <para>
@@ -148,7 +151,12 @@ private:
 	/// <param name="src_crd"> 원래 기물의 위치 </param>
 	/// <param name="dst_crd"> 목표 기물의 위치 </param>
 	/// <returns> Board type의 객체 </returns>
-	inline Board& move_piece_to(Coord src_crd, Coord dst_crd) const;
+	inline void move_piece_to(Coord src_crd, Coord dst_crd);
+	/// <summary>
+	///	move라는 수를 두는 함수이다.
+	/// </summary>
+	/// <param name="move"> 기물의 움직임 </param>
+	void apply_move(Move move);
 
 
 	/// <summary>

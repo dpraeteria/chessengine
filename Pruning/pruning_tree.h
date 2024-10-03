@@ -12,7 +12,7 @@ class PruningTree {
 public:
     //초기화
     void init() {
-        root = new Node(/*...*/);
+        root = new Node();
     }
 
     //다음 최적의 수 반환
@@ -48,7 +48,7 @@ private:
             int v = -inf;
             //단순히 move에 의한 것들을 계산하는 대신, node가 이미 가지고 있는 자식들도 사용해야 한다.
             for (Move move : moves) {
-                Node* cld = new Node(move, now_board.apply_move(move).to_fen());
+                Node* cld = new Node(move, now_board.make_moved_board(move).to_fen());
                 //여기에 체크 판정 함수 사용.
                 //  체크일 때에는 체크를 탈출 할 수 있는 수만을 사용하기
                 //  체크 상황에서 "체크 진영 == 입력 진영"일 때는 다음 수에 게임이 끝남을 의미.
