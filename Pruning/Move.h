@@ -14,10 +14,12 @@
 struct Move {
 	Coord src;
 	Coord dst;
+
 	Move() : src(), dst() {}
 	Move(Coord src_crd, Coord dst_crd)
 		: src(src_crd), dst(dst_crd) {}
-	bool operator=(Move other) const {
+
+	bool operator==(Move other) const {
 		if (src == other.src &&
 			dst == other.dst)
 			return true;

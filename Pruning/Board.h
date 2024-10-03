@@ -2,16 +2,8 @@
 #ifndef BOARD_H_INCLUDED
 #define BOARD_H_INCLUDED
 
-//! 디버그용 - print(), print_movable_cases() 함수에만 사용
-#include <iostream>
-#include <functional>
-#include <Windows.h>
-#include <conio.h>
-
-#include <algorithm>
 #include <vector>
 #include <string>
-#include <cctype>
 #include "Coord.h"
 #include "Move.h"
 using std::string;
@@ -21,37 +13,15 @@ enum Side : char { WHITE, BLACK, EMPTY, GREY/*check 함수에서만 사용한다
 
 /// <summary>
 /// 체스 보드를 8*8의 형태로 저장하는 구조체.
+/// FEN 형식과 일대일로 대응할 수 있다.
 /// <para>
 ///		용량이 크기 때문에 사용을 최소화해야 한다.
 /// </para>
 /// </summary>
 class Board {
 public:
-	Board() {
-		for (int i = 0; i < 64; ++i)
-			board[i] = ' ';
-	}
-	Board(string FEN) {
-		*this = Board();
-
-		Rank rank = RANK_8;
-		File file = FILE_A;
-		for (char c : FEN) {
-			if (c == ' ') {
-				break;
-			}
-			else if (c == '/'); //c가 '/'인 경우는 무시한다.
-			else if (isalpha(c)) {
-				set_piece(Coord(rank, file), c);
-				++file;
-			}
-			else if (isdigit(c)) {
-				file = (File)(file + (c - '0'));	//file += c - '0'
-			}
-			rank = (Rank)(rank - file / 8);		//rank += file / 8;
-			file = (File)(file % 8);			//file %= 8;
-		}
-	}
+	Board();
+	Board(string FEN);
 
 
 	/// <summary>
@@ -92,12 +62,51 @@ public:
 
 private:
 	/// <summary>
-	/// 각각의 기물은 이름의 초성으로 표현되며, FEN 방식을 따른다.
+	/// 각각의 기물은 FEN 방식을 따라 기록된다.
 	/// <para>
+	///		기물 이름의 초성을 사용하며,
 	///		백이 대문자, 흑이 소문자이다.
 	/// </para>
 	/// </summary>
 	char board[64] = {};
+	/// <summary>
+	/// 차례를 나타낸다.
+	/// <para>
+	///		null값은 EMPTY 이다.
+	/// </para>
+	/// </summary>
+	Side turn;
+	/// <summary>
+	/// 백의 킹사이드 캐슬링 가능 여부를 나타낸다.
+	/// </summary>
+	bool castling_K;
+	/// <summary>
+	/// 백의 퀸사이드 캐슬링 가능 여부를 나타낸다.
+	/// </summary>
+	bool castling_Q;
+	/// <summary>
+	/// 흑의 킹사이드 캐슬링 가능 여부를 나타낸다.
+	/// </summary>
+	bool castling_k;
+	/// <summary>
+	/// 흑의 퀸사이드 캐슬링 가능 여부를 나타낸다.
+	/// </summary>
+	bool castling_q;
+	/// <summary>
+	/// 앙파상 가능한 좌표를 나타낸다.
+	/// <para>
+	///		null 값은 Coord의 기본값인 {RANK_NON, FILE_NON} 이다.
+	/// </para>
+	/// </summary>
+	Coord en_passant;
+	/// <summary>
+	/// 하프무브 값을 나타낸다.
+	/// </summary>
+	short half_move;
+	/// <summary>
+	/// 풀무브 값을 나타낸다.
+	/// </summary>
+	short full_move;
 
 
 	/// <summary>
@@ -112,20 +121,14 @@ private:
 	/// <param name="coord"> 기물의 종류를 확인할 좌표 </param>
 	/// <returns> 좌표 위 기물의 종류를 반환 </returns>
 	char get_piece(Coord coord) const;
-
-
 	/// <summary>
 	/// 특정 좌표에서 기물의 진영을 반환하는 함수이다.
 	/// </summary>
 	/// <param name="coord"> 기물의 진영을 확인할 좌표 </param>
 	/// <returns> 좌표 위 기물의 진영을 반환(enum Side 참고) </returns>
 	inline Side get_side(Coord coord) const;
-	/// <summary>
-	/// 좌표 하나를 받아서 해당 좌표가 체스판 위에 존재하는지를 확인한다.
-	/// </summary>
-	/// <param name="coord"> 확인을 원하는 좌표 </param>
-	/// <returns> 좌표가 체스판 위에 있으면 참, 아니면 거짓 </returns>
-	inline bool is_on_board(Coord coord) const;
+
+
 	/// <summary>
 	/// 좌표 하나와 진영을 받아서 해당 위치에 말을 놓을 수 있는지를 판별하는 함수이다.
 	/// <para>
@@ -149,7 +152,10 @@ private:
 
 
 	/// <summary>
-	/// 현재 Board가 체크 상황인지 확인하는 함수.
+	/// 현재 Board가 체크 상황인지 확인하는 함수이다.
+	/// <para>
+	///		확인하는 과정에서 movable()을 사용하므로, apply_move()에서 참조하도록 한다.
+	/// </para>
 	/// </summary>
 	/// <returns> 체크 상태에 놓인 진영을 반환 </returns>
 	inline Side check() const;

@@ -16,8 +16,8 @@ enum Rank : char {
 };
 inline Rank& operator++(Rank& rank) { return rank = Rank((char)rank + 1); }
 inline Rank& operator--(Rank& rank) { return rank = Rank((char)rank - 1); }
-inline Rank operator+(Rank& rank, int i) { return Rank((char)rank + i); }
-inline Rank operator-(Rank& rank, int i) { return Rank((char)rank - i); }
+inline Rank operator+(Rank rank, int i) { return Rank((char)rank + i); }
+inline Rank operator-(Rank rank, int i) { return Rank((char)rank - i); }
 
 /// <summary>
 ///	열을 의미하는 File의 열거형이다.
@@ -33,8 +33,8 @@ enum File : char {
 };
 inline File& operator++(File& rank) { return rank = File((char)rank + 1); }
 inline File& operator--(File& rank) { return rank = File((char)rank - 1); }
-inline File operator+(File& file, int i) { return File((char)file + i); }
-inline File operator-(File& file, int i) { return File((char)file - i); }
+inline File operator+(File file, int i) { return File((char)file + i); }
+inline File operator-(File file, int i) { return File((char)file - i); }
 
 
 /// <summary>
@@ -48,12 +48,25 @@ inline File operator-(File& file, int i) { return File((char)file - i); }
 struct Coord {
 	Rank rank; //행을 의미하며, 숫자로 표현된다.
 	File file; //열을 의미하며, 알파벳으로 표현된다.
+
 	Coord() : rank(RANK_NON), file(FILE_NON) {}
 	Coord(Rank rank, File file)
 		: rank(rank), file(file) {}
 	bool operator==(Coord other) const {
 		if (rank == other.rank &&
 			file == other.file)
+			return true;
+		else
+			return false;
+	}
+
+	/// <summary>
+	/// 이 좌표가 체스판 위에 존재하는지를 확인한다.
+	/// </summary>
+	/// <returns> 좌표가 체스판 위에 있으면 참, 아니면 거짓 </returns>
+	bool on_board() const {
+		if (RANK_1 <= rank && rank <= RANK_8 &&
+			FILE_A <= file && file <= FILE_H)
 			return true;
 		else
 			return false;
