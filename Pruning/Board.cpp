@@ -263,6 +263,7 @@ void Board::print_movable_cases(Side side) const {
 	}
 }
 void Board::GAME(string fen) {
+	using std::cout;
 	Board board = Board(fen);
 	char order;
 
@@ -298,7 +299,7 @@ void Board::GAME(string fen) {
 		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
 		game_src_cancel:
 		order = '\0';
-		while (order != ' ') {
+		while (order != ' ' && order != 13) {
 			board.print(Move(src, dst));
 			order = get_order();
 			move(src);
@@ -321,7 +322,7 @@ void Board::GAME(string fen) {
 		dst = src;
 		game_dst_cancel:
 		order = '\0';
-		while (order != ' ') {
+		while (order != ' '&& order != 13) {
 			board.print(Move(src, dst));
 			order = get_order();
 			move(dst);
@@ -333,6 +334,7 @@ void Board::GAME(string fen) {
 		}
 #pragma endregion
 #pragma region dst check legal
+		//움직일 수 있는 움직임들 계산
 		vector<Move> moves;
 		switch (board.get_piece(src)) {
 		case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
@@ -342,36 +344,77 @@ void Board::GAME(string fen) {
 		case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
 		case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
 		}
-		bool is_move_legal = false;
-		for (Move move : moves) {
-			if (move.dst == dst) {
-				is_move_legal = true;
-				break;
-			}
-		}
-		if (!is_move_legal) {
-			std::cout << '\n';
-			std::cout << "잘못된 위치를 선택했습니다." << '\n';
-			std::cout << "이 기물은 선택하신 위치로 이동할 수 없습니다." << '\n';
-			std::cout << "(Press any button to continue.)" << '\n';
+		//목표하는 움직임이 위의 움직임에 포함되는가 확인
+		bool is_coord_legal = true;
+		Move move = Move(src, dst);
+		if (find(moves.begin(), moves.end(), move) == moves.end())
+			is_coord_legal = false;
+		//핀 판단을 위한 변수들
+		Board new_board = board.make_moved_board(move);
+		Side check_side = new_board.check();
+		bool is_pin_legal = true;
+		if (check_side == board.turn ||
+			check_side == GREY)
+			is_pin_legal = false;
+		//이동이 적법한지 최종 확인
+		if (is_coord_legal && is_pin_legal);
+		else {
+			cout << '\n';
+			cout << "잘못된 위치를 선택했습니다." << '\n';
+			if (!is_coord_legal)
+				cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
+			if (!is_pin_legal)
+				cout << "사유 : 절대적 핀 상태에 놓임\n";
+			cout << "(Press any button to continue.)" << '\n';
 			_getch();
 			goto game_dst_cancel;
 		}
 #pragma endregion
 
 		board.apply_move(Move(src, dst));
+
+		//프로모션
+		char piece = board.get_piece(dst);
+		if (piece == 'P' && dst.rank == RANK_8 ||
+			piece == 'p' && dst.rank == RANK_1) {
+			cout << "프로모션 가능합니다.\n";
+			cout << "교체를 원하는 기물을 선택해 주세요.\n";
+			cout << "\t(Q : 퀸, R : 룩, B : 비숍, N : 나이트, 0 : 취소)\n";
+			char order = '\0';
+			bool input_process = true;
+			while (input_process) {
+				order = _getch();
+				if ('A' <= order && order <= 'Z')
+					order += 'a' - 'A';
+				switch (order) {
+				case 'q':
+				case 'r':
+				case 'b':
+				case 'n':
+					board.set_piece(dst, piece + order - 'p');
+				case '0':
+					input_process = false;
+					break;
+				default:
+					cout << "잘못된 입력입니다.\n";
+					break;
+				}
+			}
+		}
 	}
 }
 /*
 	< 특수규칙 상황 커멘트 >
 
-앙파상 : "w ww d ssa www w ds ss wwww dw "
+앙파상 :
+	"w ww d ssa www w ds ss wwww dw "
 
 킹사이드 캐슬링 :
 	"dddddddw ww s s ddddddw ww ss s ddddd dw ds s dddddd dww dss s `dddd dd "
 	"ddddddw ww dddddds ss ddddd dwdw ddddd dsds dddddd wwa dddddd ssa `dddd dd "
 
-퀸사이드 캐슬링 : "d wwa s s dw ww ss s dd aw ds s ddw w dss s ddd aw dds s dddd aa "
+퀸사이드 캐슬링 :
+	"d wwa s s dw ww ss s dd aw ds s ddw w dss s ddd aw dds s `dddd aa "
 
 */
 
@@ -461,14 +504,14 @@ inline void Board::apply_move(Move move) {
 		}
 	}
 	//앙파상 적용
-	if (en_passant == move.dst) {
+	if (en_passant == move.dst && (
+		move_piece == 'P' ||
+		move_piece == 'p')) {
 		if (en_passant.rank == RANK_3)
 			set_piece(Coord(RANK_4, en_passant.file), ' ');
 		if (en_passant.rank == RANK_6)
 			set_piece(Coord(RANK_5, en_passant.file), ' ');
 	}
-	//프로모션
-	;
 #pragma endregion
 #pragma region after move
 
