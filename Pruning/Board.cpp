@@ -267,6 +267,8 @@ void Board::GAME(string fen) {
 	Board board = Board(fen);
 	char order;
 
+	//사용자의 입력을 받는 함수.
+	//화살표 입력을 wasd로 전환해주는 역할이 메인이다.
 	std::function<char()> get_order = []() {
 		char order = _getch();
 		if (order == -32) {
@@ -280,6 +282,9 @@ void Board::GAME(string fen) {
 		}
 		return order;
 		};
+	//입력받은 좌표를 한 칸 이동시키는 함수.
+	//order의 방향과 같은 방향으로 이동한다.
+	//체스판을 벗어나서 이동할 수 없게 설정했다.
 	std::function<void(Coord&)> move = [&order](Coord& crd) {
 		switch (order) {
 		case 'W': case 'w':
@@ -292,88 +297,100 @@ void Board::GAME(string fen) {
 		};
 
 	while (true) {
+		//src, dst는 각각 시작접과 도착점으로,
+		//다시 말해 기물, 그리고 기물이 도달할 위치이다.
 		Coord src = Coord(), dst = Coord();
 		board.print();
 
-#pragma region src input
+		//차례가 백이면 왼쪽 아래에서, 흑이면 왼쪽 위에서 시작하도록 했다.
 		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
+		//dst의 선택 과정에서 취소를 택했을 때, 돌아오기 위한 goto 라벨이다.
 		game_src_cancel:
 		order = '\0';
+		//order가 space 이거나 enter인 경우 선택을 종료하도록 했다
 		while (order != ' ' && order != 13) {
+			//src와 dst를 반영해 현 상황을 화면에 출력한다.
 			board.print(Move(src, dst));
+#pragma region src input
 			order = get_order();
 			move(src);
 			if (order == 'Q' || order == 'q');
+			//order가 esc인 경우 GAME() 함수를 종료한다.
 			else if (order == 27)	return;
-		}
 #pragma endregion
 #pragma region src check legal
-		if (board.get_side(src) != board.turn) {
-			std::cout << '\n';
-			std::cout << "잘못된 진영을 선택했습니다." << '\n';
-			std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
-			std::cout << "(Press any button to continue.)" << '\n';
-			_getch();
-			goto game_src_cancel;
-		}
+			//체례에 맞는 기물의 위치를 선택하지 않았을 경우, 다시 선택하도록 한다.
+			if (board.get_side(src) != board.turn) {
+				std::cout << '\n';
+				std::cout << "잘못된 진영을 선택했습니다." << '\n';
+				std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
+				std::cout << "(Press any button to continue.)" << '\n';
+				_getch();
+			}
+			else
+				break;
 #pragma endregion
+		}
 
-#pragma region dst input
+		//dst의 초기 위치를 src로 지정한다.
 		dst = src;
-		game_dst_cancel:
 		order = '\0';
 		while (order != ' '&& order != 13) {
+			//src와 dst를 반영해 현 상황을 화면에 출력한다.
 			board.print(Move(src, dst));
+#pragma region dst input
 			order = get_order();
 			move(dst);
 			if (order == 'Q' || order == 'q') {
 				dst = Coord();
+				//src가 시작하는 위치로 되돌아간다.
 				goto game_src_cancel;
 			}
 			else if (order == 27)	return;
-		}
 #pragma endregion
 #pragma region dst check legal
-		//움직일 수 있는 움직임들 계산
-		vector<Move> moves;
-		switch (board.get_piece(src)) {
-		case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
-		case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
-		case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
-		case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
-		case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
-		case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
-		}
-		//목표하는 움직임이 위의 움직임에 포함되는가 확인
-		bool is_coord_legal = true;
-		Move move = Move(src, dst);
-		if (find(moves.begin(), moves.end(), move) == moves.end())
-			is_coord_legal = false;
-		//핀 판단을 위한 변수들
-		Board new_board = board.make_moved_board(move);
-		Side check_side = new_board.check();
-		bool is_pin_legal = true;
-		if (check_side == board.turn ||
-			check_side == GREY)
-			is_pin_legal = false;
-		//이동이 적법한지 최종 확인
-		if (is_coord_legal && is_pin_legal);
-		else {
-			cout << '\n';
-			cout << "잘못된 위치를 선택했습니다." << '\n';
-			if (!is_coord_legal)
-				cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
-			if (!is_pin_legal)
-				cout << "사유 : 절대적 핀 상태에 놓임\n";
-			cout << "(Press any button to continue.)" << '\n';
-			_getch();
-			goto game_dst_cancel;
-		}
+			//움직일 수 있는 움직임들 계산
+			vector<Move> moves;
+			switch (board.get_piece(src)) {
+			case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
+			case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
+			case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
+			case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
+			case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
+			case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
+			}
+			//목표하는 움직임이 위의 움직임에 포함되는가 확인
+			bool is_coord_legal = true;
+			Move move = Move(src, dst);
+			if (find(moves.begin(), moves.end(), move) == moves.end())
+				is_coord_legal = false;
+			//절대적 핀 판단을 위한 변수들
+			bool is_pin_legal = true;
+			Board new_board = board.make_moved_board(move);
+			Side check_side = new_board.check();
+			if (check_side == board.turn ||
+				check_side == GREY)
+				is_pin_legal = false;
+			//이동이 적법한지 최종 확인
+			if (is_coord_legal && is_pin_legal)
+				break;
+			else {
+				cout << '\n';
+				cout << "잘못된 위치를 선택했습니다." << '\n';
+				if (!is_coord_legal)
+					cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
+				if (!is_pin_legal)
+					cout << "사유 : 절대적 핀 상태에 놓임\n";
+				cout << "(Press any button to continue.)" << '\n';
+				_getch();
+			}
 #pragma endregion
+		}
 
+		//플레이거가 선택한 이동을 적용한다.
 		board.apply_move(Move(src, dst));
 
-		//프로모션
+		//프로모션 가능한 경우, 원하는 말을 선택하도록 한다.
 		char piece = board.get_piece(dst);
 		if (piece == 'P' && dst.rank == RANK_8 ||
 			piece == 'p' && dst.rank == RANK_1) {
@@ -384,6 +401,7 @@ void Board::GAME(string fen) {
 			bool input_process = true;
 			while (input_process) {
 				order = _getch();
+				//order가 대문자인 경우, 소문자로 변환해준다.
 				if ('A' <= order && order <= 'Z')
 					order += 'a' - 'A';
 				switch (order) {
@@ -391,11 +409,14 @@ void Board::GAME(string fen) {
 				case 'r':
 				case 'b':
 				case 'n':
+					//프로모션으로서 바꿀 기물을 선택했을 경우, 선택한 대로 기물을 바꿔준다.
 					board.set_piece(dst, piece + order - 'p');
 				case '0':
+					//0을 입력했을 경우, 그대로 반복문을 적용하도록 한다.
 					input_process = false;
 					break;
 				default:
+					//선택지 밖의 입력이 주어졌을 경우, 다시 선택하도록 한다.
 					cout << "잘못된 입력입니다.\n";
 					break;
 				}
