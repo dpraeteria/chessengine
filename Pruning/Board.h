@@ -180,6 +180,7 @@ private:
 	void apply_move(Move move);
 
 
+public:
 	/// <summary>
 	/// 킹의 좌표를 받아 체크 상황인지 확인하는 함수이다.
 	/// <para>
@@ -201,9 +202,10 @@ private:
 	/// 진영을 받아 해당 진영이 체크메이트 상황인지를 확인하는 함수이다.
 	/// </summary>
 	/// <returns> 진영이 체크메이트면 참, 아니면 거짓 </returns>
-	inline bool checkmate(Side side) const;
+	inline bool checkmate() const;
 
 
+private:
 	inline vector<Move> __movable_k(Coord src_crd, Side side) const;
 	/// <summary>
 	/// 왕이 움직일 수 있는 모든 좌표를 계산해 반환한다.

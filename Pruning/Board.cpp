@@ -208,7 +208,7 @@ void Board::print(Move move) const {
 		};
 
 	system("cls");
-	cout << "     A   B   C   D   E   F   G   H     \n";
+	cout << "	 A   B   C   D   E   F   G   H	 \n";
 	cout << "   +---+---+---+---+---+---+---+---+   \n";
 	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
 		cout << ' ' << char('1' + rank) << ' ';
@@ -232,7 +232,7 @@ void Board::print(Move move) const {
 		cout << "| " << char('1' + rank) << " \n";
 		cout << "   +---+---+---+---+---+---+---+---+   \n";
 	}
-	cout << "     A   B   C   D   E   F   G   H     \n";
+	cout << "	 A   B   C   D   E   F   G   H	 \n";
 	cout << "\n";
 
 	cout << "fen = \"" << to_fen() << "\"\n";
@@ -634,12 +634,12 @@ inline Side Board::check() const {
 	else				return EMPTY;
 }
 //좀 더 최적화된 형태로 만들어야 하나...
-inline bool Board::checkmate(Side side) const {
+inline bool Board::checkmate() const {
 	vector<Move> moves = movable_cases();
 	for (Move move : moves) {
 		Board new_board = make_moved_board(move);
 		Side check_side = new_board.check();
-		if (check_side == side && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
+		if (check_side == turn && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
 		else
 			return true;
 	}
