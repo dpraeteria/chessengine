@@ -45,7 +45,7 @@ public:
 	/// </summary>
 	/// <param name="is_white_side"></param>
 	/// <returns></returns>
-	vector<Move> movable_cases(Side side) const;
+	vector<Move> movable_cases() const;
 
 
 	/// <summary>
@@ -162,7 +162,7 @@ private:
 	/// <param name="dst_crd"> 확인을 원하는 좌표 </param>
 	/// <param name="side"> 진영 </param>
 	/// <returns> 좌표가 비여있거나 적의 기물이 있으면 참, 아니면 거짓 </returns>
-	inline bool movable_piece(const Coord& dst_crd, Side side) const;
+	inline bool movable_piece(const Coord& dst_crd) const;
 	/// <summary>
 	/// movable_to()가 true임을 전제로 기물의 움직임이 실현된 결과를 반환한다
 	/// <para>

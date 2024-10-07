@@ -170,14 +170,14 @@ Board Board::make_moved_board(Move move) const {
 	potential_board.apply_move(move);
 	return potential_board;
 }
-vector<Move> Board::movable_cases(Side side) const {
+vector<Move> Board::movable_cases() const {
 	vector<Move> result;
 
 	for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
 		for (File file = FILE_A; file <= FILE_H; ++file) {
 			Coord src_crd = Coord(rank, file);
 
-			if (get_side(src_crd) == side);
+			if (get_side(src_crd) == turn);
 			else
 				continue;
 
@@ -185,12 +185,12 @@ vector<Move> Board::movable_cases(Side side) const {
 			//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
 			//	달리 구현하여 실행 및 변수 add에 대입한다.
 			switch (get_piece(src_crd)) {
-			case 'K': case 'k': { add = movable_k(src_crd, side); break; }
-			case 'Q': case 'q': { add = movable_q(src_crd, side); break; }
-			case 'R': case 'r': { add = movable_r(src_crd, side); break; }
-			case 'B': case 'b': { add = movable_b(src_crd, side); break; }
-			case 'N': case 'n': { add = movable_n(src_crd, side); break; }
-			case 'P': case 'p': { add = movable_p(src_crd, side); break; }
+			case 'K': case 'k': { add = movable_k(src_crd, turn); break; }
+			case 'Q': case 'q': { add = movable_q(src_crd, turn); break; }
+			case 'R': case 'r': { add = movable_r(src_crd, turn); break; }
+			case 'B': case 'b': { add = movable_b(src_crd, turn); break; }
+			case 'N': case 'n': { add = movable_n(src_crd, turn); break; }
+			case 'P': case 'p': { add = movable_p(src_crd, turn); break; }
 			}
 			//add의 요소들은 result에 추가된다.
 			result.insert(result.end(),
@@ -251,7 +251,7 @@ void Board::print(Move move) const {
 	cout << "full move\t" << full_move << '\n';
 }
 void Board::print_movable_cases(Side side) const {
-	vector<Move> moves = movable_cases(side);
+	vector<Move> moves = movable_cases();
 	for (Move move : moves) {
 		print(move);
 
@@ -278,6 +278,7 @@ void Board::GAME(string fen) {
 			case 75: return 'a';
 			case 80: return 's';
 			case 77: return 'd';
+			case 13: return ' ';
 			}
 		}
 		return order;
@@ -287,11 +288,9 @@ void Board::GAME(string fen) {
 	//체스판을 벗어나서 이동할 수 없게 설정했다.
 	std::function<void(Coord&)> move = [&order](Coord& crd) {
 		switch (order) {
-		case 'W': case 'w':
-			if (crd.rank < RANK_8) ++crd.rank; break;
+		case 'W': case 'w': if (crd.rank < RANK_8) ++crd.rank; break;
 		case 'A': case 'a': if (crd.file > FILE_A) --crd.file; break;
-		case 'S': case 's':
-			if (crd.rank > RANK_1) --crd.rank; break;
+		case 'S': case 's': if (crd.rank > RANK_1) --crd.rank; break;
 		case 'D': case 'd': if (crd.file < FILE_H) ++crd.file; break;
 		}
 		};
@@ -308,7 +307,7 @@ void Board::GAME(string fen) {
 		game_src_cancel:
 		order = '\0';
 		//order가 space 이거나 enter인 경우 선택을 종료하도록 했다
-		while (order != ' ' && order != 13) {
+		while (true) {
 			//src와 dst를 반영해 현 상황을 화면에 출력한다.
 			board.print(Move(src, dst));
 #pragma region src input
@@ -320,15 +319,17 @@ void Board::GAME(string fen) {
 #pragma endregion
 #pragma region src check legal
 			//체례에 맞는 기물의 위치를 선택하지 않았을 경우, 다시 선택하도록 한다.
-			if (board.get_side(src) != board.turn) {
-				std::cout << '\n';
-				std::cout << "잘못된 진영을 선택했습니다." << '\n';
-				std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
-				std::cout << "(Press any button to continue.)" << '\n';
-				_getch();
+			else if (order == ' ') {
+				if (board.get_side(src) != board.turn) {
+					std::cout << '\n';
+					std::cout << "잘못된 진영을 선택했습니다." << '\n';
+					std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
+					std::cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
+				else
+					break;
 			}
-			else
-				break;
 #pragma endregion
 		}
 
@@ -349,40 +350,42 @@ void Board::GAME(string fen) {
 			else if (order == 27)	return;
 #pragma endregion
 #pragma region dst check legal
-			//움직일 수 있는 움직임들 계산
-			vector<Move> moves;
-			switch (board.get_piece(src)) {
-			case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
-			case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
-			case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
-			case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
-			case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
-			case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
-			}
-			//목표하는 움직임이 위의 움직임에 포함되는가 확인
-			bool is_coord_legal = true;
-			Move move = Move(src, dst);
-			if (find(moves.begin(), moves.end(), move) == moves.end())
-				is_coord_legal = false;
-			//절대적 핀 판단을 위한 변수들
-			bool is_pin_legal = true;
-			Board new_board = board.make_moved_board(move);
-			Side check_side = new_board.check();
-			if (check_side == board.turn ||
-				check_side == GREY)
-				is_pin_legal = false;
-			//이동이 적법한지 최종 확인
-			if (is_coord_legal && is_pin_legal)
-				break;
-			else {
-				cout << '\n';
-				cout << "잘못된 위치를 선택했습니다." << '\n';
-				if (!is_coord_legal)
-					cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
-				if (!is_pin_legal)
-					cout << "사유 : 절대적 핀 상태에 놓임\n";
-				cout << "(Press any button to continue.)" << '\n';
-				_getch();
+			else if (order == ' ') {
+				//움직일 수 있는 움직임들 계산
+				vector<Move> moves;
+				switch (board.get_piece(src)) {
+				case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
+				case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
+				case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
+				case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
+				case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
+				case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
+				}
+				//목표하는 움직임이 위의 움직임에 포함되는가 확인
+				bool is_coord_legal = true;
+				Move move = Move(src, dst);
+				if (find(moves.begin(), moves.end(), move) == moves.end())
+					is_coord_legal = false;
+				//절대적 핀 판단을 위한 변수들
+				bool is_pin_legal = true;
+				Board new_board = board.make_moved_board(move);
+				Side check_side = new_board.check();
+				if (check_side == board.turn ||
+					check_side == GREY)
+					is_pin_legal = false;
+				//이동이 적법한지 최종 확인
+				if (is_coord_legal && is_pin_legal)
+					break;
+				else {
+					cout << '\n';
+					cout << "잘못된 위치를 선택했습니다." << '\n';
+					if (!is_coord_legal)
+						cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
+					if (!is_pin_legal)
+						cout << "사유 : 절대적 핀 상태에 놓임\n";
+					cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
 			}
 #pragma endregion
 		}
@@ -459,8 +462,8 @@ Side Board::get_side(Coord coord) const {
 }
 
 
-inline bool Board::movable_piece(const Coord& dst_crd, Side side) const {
-	if (get_side(dst_crd) != side)
+inline bool Board::movable_piece(const Coord& dst_crd) const {
+	if (get_side(dst_crd) != turn)
 		return true;
 	else
 		return false;
@@ -632,7 +635,7 @@ inline Side Board::check() const {
 }
 //좀 더 최적화된 형태로 만들어야 하나...
 inline bool Board::checkmate(Side side) const {
-	vector<Move> moves = movable_cases(side);
+	vector<Move> moves = movable_cases();
 	for (Move move : moves) {
 		Board new_board = make_moved_board(move);
 		Side check_side = new_board.check();
@@ -652,7 +655,7 @@ inline vector<Move> Board::__movable_k(Coord src_crd, Side side) const {
 		Coord dst_crd = Coord(
 			src_crd.rank + move_r[i],
 			src_crd.file + move_f[i]);
-		if (dst_crd.on_board() && movable_piece(dst_crd, side)) {
+		if (dst_crd.on_board() && movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 		}
 	}
@@ -728,7 +731,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 	vector<Move> result;
 	for (Rank rank = src_crd.rank + 1; rank <= RANK_8; ++rank) {
 		Coord dst_crd = Coord(rank, src_crd.file);
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -738,7 +741,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 	}
 	for (File file = src_crd.file + 1; file <= FILE_H; ++file) {
 		Coord dst_crd = Coord(src_crd.rank, file);
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -748,7 +751,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 	}
 	for (Rank rank = src_crd.rank - 1; rank >= RANK_1; --rank) {
 		Coord dst_crd = Coord(rank, src_crd.file);
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -758,7 +761,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 	}
 	for (File file = src_crd.file - 1; file >= FILE_A; --file) {
 		Coord dst_crd = Coord(src_crd.rank, file);
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -771,7 +774,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 	vector<Move> result;
 	for (Coord dst_crd{ src_crd.rank + 1, src_crd.file - 1 }; dst_crd.on_board(); ++dst_crd.rank, --dst_crd.file) {
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -780,7 +783,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 			break;
 	}
 	for (Coord dst_crd{ src_crd.rank + 1, src_crd.file + 1 }; dst_crd.on_board(); ++dst_crd.rank, ++dst_crd.file) {
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -789,7 +792,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 			break;
 	}
 	for (Coord dst_crd{ src_crd.rank - 1, src_crd.file - 1 }; dst_crd.on_board(); --dst_crd.rank, --dst_crd.file) {
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -798,7 +801,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 			break;
 	}
 	for (Coord dst_crd{ src_crd.rank - 1, src_crd.file + 1 }; dst_crd.on_board(); --dst_crd.rank, ++dst_crd.file) {
-		if (movable_piece(dst_crd, side)) {
+		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 			if (get_side(dst_crd) != EMPTY)
 				break;
@@ -816,7 +819,7 @@ inline vector<Move> Board::movable_n(Coord src_crd, Side side) const {
 		Coord dst_crd = Coord(
 			src_crd.rank + move_r[i],
 			src_crd.file + move_f[i]);
-		if (dst_crd.on_board() && movable_piece(dst_crd, side)) {
+		if (dst_crd.on_board() && movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
 		}
 	}

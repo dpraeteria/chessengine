@@ -26,6 +26,9 @@ struct Move {
 		else
 			return false;
 	}
+	bool operator!=(Move other) const {
+		return !this->operator==(other);
+	}
 };
 
 #endif // !MOVE_H_INCLUDED
