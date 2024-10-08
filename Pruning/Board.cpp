@@ -5,6 +5,7 @@
 #include <iostream>
 #include <Windows.h>
 #include <conio.h>
+#include "pruning_tree.h"
 
 
 Board::Board() {
@@ -165,284 +166,6 @@ string Board::to_fen() const {
 
 	return fen;
 }
-Board Board::make_moved_board(Move move) const {
-	Board potential_board = *this;
-	potential_board.apply_move(move);
-	return potential_board;
-}
-vector<Move> Board::movable_cases() const {
-	vector<Move> result;
-
-	for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
-		for (File file = FILE_A; file <= FILE_H; ++file) {
-			Coord src_crd = Coord(rank, file);
-
-			if (get_side(src_crd) == turn);
-			else
-				continue;
-
-			vector<Move> add;
-			//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
-			//	달리 구현하여 실행 및 변수 add에 대입한다.
-			switch (get_piece(src_crd)) {
-			case 'K': case 'k': { add = movable_k(src_crd, turn); break; }
-			case 'Q': case 'q': { add = movable_q(src_crd, turn); break; }
-			case 'R': case 'r': { add = movable_r(src_crd, turn); break; }
-			case 'B': case 'b': { add = movable_b(src_crd, turn); break; }
-			case 'N': case 'n': { add = movable_n(src_crd, turn); break; }
-			case 'P': case 'p': { add = movable_p(src_crd, turn); break; }
-			}
-			//add의 요소들은 result에 추가된다.
-			result.insert(result.end(),
-				add.begin(), add.end());
-		}
-	}
-	return result;
-}
-
-
-void Board::print(Move move) const {
-	using std::cout;
-	const std::function<void(int)> set_color = [](int color) {
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
-		};
-
-	system("cls");
-	cout << "	 A   B   C   D   E   F   G   H	 \n";
-	cout << "   +---+---+---+---+---+---+---+---+   \n";
-	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
-		cout << ' ' << char('1' + rank) << ' ';
-		for (File file = FILE_A; file <= FILE_H; ++file) {
-			cout << "|";
-			Coord coord = Coord(rank, file);
-			if (false);
-			else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
-			else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
-			if (turn == WHITE) {
-				if (move.src == coord) set_color(0x30);
-				if (move.dst == coord) set_color(0x10);
-			}
-			if (turn == BLACK) {
-				if (move.src == coord) set_color(0x50);
-				if (move.dst == coord) set_color(0xC0);
-			}
-			cout << " " << get_piece(Coord(rank, file)) << " ";
-			set_color(0x07);
-		}
-		cout << "| " << char('1' + rank) << " \n";
-		cout << "   +---+---+---+---+---+---+---+---+   \n";
-	}
-	cout << "	 A   B   C   D   E   F   G   H	 \n";
-	cout << "\n";
-
-	cout << "fen = \"" << to_fen() << "\"\n";
-	cout << "turn\t\t" << (turn == WHITE ? "WHITE" : "BLACK") << '\n';
-	cout << "castling KQkq\t"
-		<< (castling_K ? '1' : '-') << ' ' << (castling_Q ? '1' : '-') << ' '
-		<< (castling_k ? '1' : '-') << ' ' << (castling_q ? '1' : '-') << ' ' << '\n';
-	cout << "en passant\t";
-	if (en_passant == Coord()) cout << '-';
-	else {
-		cout << char('a' + en_passant.file);
-		cout << char('1' + en_passant.rank);
-	}
-	cout << '\n';
-	cout << "half move\t" << half_move << '\n';
-	cout << "full move\t" << full_move << '\n';
-}
-void Board::print_movable_cases(Side side) const {
-	vector<Move> moves = movable_cases();
-	for (Move move : moves) {
-		print(move);
-
-		while (true) {
-			char order = _getch();
-			if (order == ' ')
-				break;
-		}
-	}
-}
-void Board::GAME(string fen) {
-	using std::cout;
-	Board board = Board(fen);
-	char order;
-
-	//사용자의 입력을 받는 함수.
-	//화살표 입력을 wasd로 전환해주는 역할이 메인이다.
-	std::function<char()> get_order = []() {
-		char order = _getch();
-		if (order == -32) {
-			order = _getch();
-			switch (order) {
-			case 72: return 'w';
-			case 75: return 'a';
-			case 80: return 's';
-			case 77: return 'd';
-			case 13: return ' ';
-			}
-		}
-		return order;
-		};
-	//입력받은 좌표를 한 칸 이동시키는 함수.
-	//order의 방향과 같은 방향으로 이동한다.
-	//체스판을 벗어나서 이동할 수 없게 설정했다.
-	std::function<void(Coord&)> move = [&order](Coord& crd) {
-		switch (order) {
-		case 'W': case 'w': if (crd.rank < RANK_8) ++crd.rank; break;
-		case 'A': case 'a': if (crd.file > FILE_A) --crd.file; break;
-		case 'S': case 's': if (crd.rank > RANK_1) --crd.rank; break;
-		case 'D': case 'd': if (crd.file < FILE_H) ++crd.file; break;
-		}
-		};
-
-	while (true) {
-		//src, dst는 각각 시작접과 도착점으로,
-		//다시 말해 기물, 그리고 기물이 도달할 위치이다.
-		Coord src = Coord(), dst = Coord();
-		board.print();
-
-		//차례가 백이면 왼쪽 아래에서, 흑이면 왼쪽 위에서 시작하도록 했다.
-		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
-		//dst의 선택 과정에서 취소를 택했을 때, 돌아오기 위한 goto 라벨이다.
-		game_src_cancel:
-		order = '\0';
-		//order가 space 이거나 enter인 경우 선택을 종료하도록 했다
-		while (true) {
-			//src와 dst를 반영해 현 상황을 화면에 출력한다.
-			board.print(Move(src, dst));
-#pragma region src input
-			order = get_order();
-			move(src);
-			if (order == 'Q' || order == 'q');
-			//order가 esc인 경우 GAME() 함수를 종료한다.
-			else if (order == 27)	return;
-#pragma endregion
-#pragma region src check legal
-			//체례에 맞는 기물의 위치를 선택하지 않았을 경우, 다시 선택하도록 한다.
-			else if (order == ' ') {
-				if (board.get_side(src) != board.turn) {
-					std::cout << '\n';
-					std::cout << "잘못된 진영을 선택했습니다." << '\n';
-					std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
-					std::cout << "(Press any button to continue.)" << '\n';
-					_getch();
-				}
-				else
-					break;
-			}
-#pragma endregion
-		}
-
-		//dst의 초기 위치를 src로 지정한다.
-		dst = src;
-		order = '\0';
-		while (order != ' '&& order != 13) {
-			//src와 dst를 반영해 현 상황을 화면에 출력한다.
-			board.print(Move(src, dst));
-#pragma region dst input
-			order = get_order();
-			move(dst);
-			if (order == 'Q' || order == 'q') {
-				dst = Coord();
-				//src가 시작하는 위치로 되돌아간다.
-				goto game_src_cancel;
-			}
-			else if (order == 27)	return;
-#pragma endregion
-#pragma region dst check legal
-			else if (order == ' ') {
-				//움직일 수 있는 움직임들 계산
-				vector<Move> moves;
-				switch (board.get_piece(src)) {
-				case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
-				case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
-				case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
-				case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
-				case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
-				case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
-				}
-				//목표하는 움직임이 위의 움직임에 포함되는가 확인
-				bool is_coord_legal = true;
-				Move move = Move(src, dst);
-				if (find(moves.begin(), moves.end(), move) == moves.end())
-					is_coord_legal = false;
-				//절대적 핀 판단을 위한 변수들
-				bool is_pin_legal = true;
-				Board new_board = board.make_moved_board(move);
-				Side check_side = new_board.check();
-				if (check_side == board.turn ||
-					check_side == GREY)
-					is_pin_legal = false;
-				//이동이 적법한지 최종 확인
-				if (is_coord_legal && is_pin_legal)
-					break;
-				else {
-					cout << '\n';
-					cout << "잘못된 위치를 선택했습니다." << '\n';
-					if (!is_coord_legal)
-						cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
-					if (!is_pin_legal)
-						cout << "사유 : 절대적 핀 상태에 놓임\n";
-					cout << "(Press any button to continue.)" << '\n';
-					_getch();
-				}
-			}
-#pragma endregion
-		}
-
-		//플레이거가 선택한 이동을 적용한다.
-		board.apply_move(Move(src, dst));
-
-		//프로모션 가능한 경우, 원하는 말을 선택하도록 한다.
-		char piece = board.get_piece(dst);
-		if (piece == 'P' && dst.rank == RANK_8 ||
-			piece == 'p' && dst.rank == RANK_1) {
-			cout << "프로모션 가능합니다.\n";
-			cout << "교체를 원하는 기물을 선택해 주세요.\n";
-			cout << "\t(Q : 퀸, R : 룩, B : 비숍, N : 나이트, 0 : 취소)\n";
-			char order = '\0';
-			bool input_process = true;
-			while (input_process) {
-				order = _getch();
-				//order가 대문자인 경우, 소문자로 변환해준다.
-				if ('A' <= order && order <= 'Z')
-					order += 'a' - 'A';
-				switch (order) {
-				case 'q':
-				case 'r':
-				case 'b':
-				case 'n':
-					//프로모션으로서 바꿀 기물을 선택했을 경우, 선택한 대로 기물을 바꿔준다.
-					board.set_piece(dst, piece + order - 'p');
-				case '0':
-					//0을 입력했을 경우, 그대로 반복문을 적용하도록 한다.
-					input_process = false;
-					break;
-				default:
-					//선택지 밖의 입력이 주어졌을 경우, 다시 선택하도록 한다.
-					cout << "잘못된 입력입니다.\n";
-					break;
-				}
-			}
-		}
-	}
-}
-/*
-	< 특수규칙 상황 커멘트 >
-
-앙파상 :
-	"w ww d ssa www w ds ss wwww dw "
-
-킹사이드 캐슬링 :
-	"dddddddw ww s s ddddddw ww ss s ddddd dw ds s dddddd dww dss s `dddd dd "
-	"ddddddw ww dddddds ss ddddd dwdw ddddd dsds dddddd wwa dddddd ssa `dddd dd "
-
-퀸사이드 캐슬링 :
-	"d wwa s s dw ww ss s dd aw ds s ddw w dss s ddd aw dds s `dddd aa "
-
-*/
-
-
 void Board::set_piece(Coord coord, char piece) {
 	//[0,64)를 [0,8), [8,16), [16,24), [24,32), [32,40), [40,48), [48,56), [56,64)의 8개의 구간으로 나누고,
 	//이 구간들을 순서대로 쌓아서 8*8의 '2차원 배열'로 생각할 수 있다.
@@ -459,6 +182,68 @@ Side Board::get_side(Coord coord) const {
 	if ('A' <= piece && piece <= 'Z') return WHITE;
 	if ('a' <= piece && piece <= 'z') return BLACK;
 	return EMPTY;
+}
+
+
+inline bool Board::check(Coord k_crd, Side side) const {
+	for (Move move : __movable_k(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'k' ||
+			side == BLACK && get_piece(move.dst) == 'K')
+			return true;
+
+	for (Move move : movable_r(k_crd, side))
+		if (side == WHITE && (get_piece(move.dst) == 'r' || get_piece(move.dst) == 'q') ||
+			side == BLACK && (get_piece(move.dst) == 'R' || get_piece(move.dst) == 'Q'))
+			return true;
+
+	for (Move move : movable_b(k_crd, side))
+		if (side == WHITE && (get_piece(move.dst) == 'b' || get_piece(move.dst) == 'q') ||
+			side == BLACK && (get_piece(move.dst) == 'B' || get_piece(move.dst) == 'Q'))
+			return true;
+
+	for (Move move : movable_n(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'n' ||
+			side == BLACK && get_piece(move.dst) == 'N')
+			return true;
+
+	for (Move move : movable_p(k_crd, side))
+		if (side == WHITE && get_piece(move.dst) == 'p' ||
+			side == BLACK && get_piece(move.dst) == 'P')
+			return true;
+
+	return false;
+}
+inline Side Board::check() const {
+	Coord w_king;
+	Coord b_king;
+	for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
+		for (File file = FILE_A; file <= FILE_H; ++file) {
+			Coord coord = Coord(rank, file);
+			if (get_piece(coord) == 'K') w_king = coord;
+			if (get_piece(coord) == 'k') b_king = coord;
+		}
+	}
+
+	bool w_checked = check(w_king, WHITE);
+	bool b_checked = check(b_king, BLACK);
+
+	if (w_checked && b_checked)
+		return GREY;
+	else if (w_checked)	return WHITE;
+	else if (b_checked)	return BLACK;
+	else				return EMPTY;
+}
+//좀 더 최적화된 형태로 만들어야 하나...
+inline bool Board::checkmate() const {
+	vector<Move> moves = movable_cases();
+	for (Move move : moves) {
+		Board new_board = make_moved_board(move);
+		Side check_side = new_board.check();
+		if (check_side == turn && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
+		else
+			return true;
+	}
+	return false;
 }
 
 
@@ -583,70 +368,42 @@ inline void Board::apply_move(Move move) {
 	}
 #pragma endregion
 }
-
-
-inline bool Board::check(Coord k_crd, Side side) const {
-	for (Move move : __movable_k(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'k' ||
-			side == BLACK && get_piece(move.dst) == 'K')
-			return true;
-
-	for (Move move : movable_r(k_crd, side))
-		if (side == WHITE && (get_piece(move.dst) == 'r' || get_piece(move.dst) == 'q') ||
-			side == BLACK && (get_piece(move.dst) == 'R' || get_piece(move.dst) == 'Q'))
-			return true;
-
-	for (Move move : movable_b(k_crd, side))
-		if (side == WHITE && (get_piece(move.dst) == 'b' || get_piece(move.dst) == 'q') ||
-			side == BLACK && (get_piece(move.dst) == 'B' || get_piece(move.dst) == 'Q'))
-			return true;
-
-	for (Move move : movable_n(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'n' ||
-			side == BLACK && get_piece(move.dst) == 'N')
-			return true;
-
-	for (Move move : movable_p(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'p' ||
-			side == BLACK && get_piece(move.dst) == 'P')
-			return true;
-
-	return false;
+Board Board::make_moved_board(Move move) const {
+	Board potential_board = *this;
+	potential_board.apply_move(move);
+	return potential_board;
 }
-inline Side Board::check() const {
-	Coord w_king;
-	Coord b_king;
+
+
+vector<Move> Board::movable_cases() const {
+	vector<Move> result;
+
 	for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
 		for (File file = FILE_A; file <= FILE_H; ++file) {
-			Coord coord = Coord(rank, file);
-			if (get_piece(coord) == 'K') w_king = coord;
-			if (get_piece(coord) == 'k') b_king = coord;
+			Coord src_crd = Coord(rank, file);
+
+			if (get_side(src_crd) == turn);
+			else
+				continue;
+
+			vector<Move> add;
+			//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
+			//	달리 구현하여 실행 및 변수 add에 대입한다.
+			switch (get_piece(src_crd)) {
+			case 'K': case 'k': { add = movable_k(src_crd, turn); break; }
+			case 'Q': case 'q': { add = movable_q(src_crd, turn); break; }
+			case 'R': case 'r': { add = movable_r(src_crd, turn); break; }
+			case 'B': case 'b': { add = movable_b(src_crd, turn); break; }
+			case 'N': case 'n': { add = movable_n(src_crd, turn); break; }
+			case 'P': case 'p': { add = movable_p(src_crd, turn); break; }
+			}
+			//add의 요소들은 result에 추가된다.
+			result.insert(result.end(),
+				add.begin(), add.end());
 		}
 	}
-
-	bool w_checked = check(w_king, WHITE);
-	bool b_checked = check(b_king, BLACK);
-
-	if (w_checked && b_checked)
-		return GREY;
-	else if (w_checked)	return WHITE;
-	else if (b_checked)	return BLACK;
-	else				return EMPTY;
+	return result;
 }
-//좀 더 최적화된 형태로 만들어야 하나...
-inline bool Board::checkmate() const {
-	vector<Move> moves = movable_cases();
-	for (Move move : moves) {
-		Board new_board = make_moved_board(move);
-		Side check_side = new_board.check();
-		if (check_side == turn && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
-		else
-			return true;
-	}
-	return false;
-}
-
-
 inline vector<Move> Board::__movable_k(Coord src_crd, Side side) const {
 	vector<Move> result;
 	constexpr int move_r[8] = { +1,+1,+1,+0,+0,-1,-1,-1 };
@@ -876,4 +633,431 @@ inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
 			result.push_back(Move(src_crd, dst_crd));
 	}
 	return result;
+}
+
+
+void Board::print(Move move) const {
+	using std::cout;
+	const std::function<void(int)> set_color = [](int color) {
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+		};
+
+	system("cls");
+	cout << "     A   B   C   D   E   F   G   H	 \n";
+	cout << "   +---+---+---+---+---+---+---+---+   \n";
+	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
+		cout << ' ' << char('1' + rank) << ' ';
+		for (File file = FILE_A; file <= FILE_H; ++file) {
+			cout << "|";
+			Coord coord = Coord(rank, file);
+			if (false);
+			else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
+			else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
+			if (turn == WHITE) {
+				if (move.src == coord) set_color(0x30);
+				if (move.dst == coord) set_color(0x10);
+			}
+			if (turn == BLACK) {
+				if (move.src == coord) set_color(0x50);
+				if (move.dst == coord) set_color(0xC0);
+			}
+			cout << " " << get_piece(Coord(rank, file)) << " ";
+			set_color(0x07);
+		}
+		cout << "| " << char('1' + rank) << " \n";
+		cout << "   +---+---+---+---+---+---+---+---+   \n";
+	}
+	cout << "     A   B   C   D   E   F   G   H	 \n";
+	cout << "\n";
+
+	cout << "fen = \"" << to_fen() << "\"\n";
+	cout << "turn\t\t" << (turn == WHITE ? "WHITE" : "BLACK") << '\n';
+	cout << "castling KQkq\t"
+		<< (castling_K ? '1' : '-') << ' ' << (castling_Q ? '1' : '-') << ' '
+		<< (castling_k ? '1' : '-') << ' ' << (castling_q ? '1' : '-') << ' ' << '\n';
+	cout << "en passant\t";
+	if (en_passant == Coord()) cout << '-';
+	else {
+		cout << char('a' + en_passant.file);
+		cout << char('1' + en_passant.rank);
+	}
+	cout << '\n';
+	cout << "half move\t" << half_move << '\n';
+	cout << "full move\t" << full_move << '\n';
+}
+void Board::print_movable_cases(Side side) const {
+	vector<Move> moves = movable_cases();
+	for (Move move : moves) {
+		print(move);
+
+		while (true) {
+			char order = _getch();
+			if (order == ' ')
+				break;
+		}
+	}
+}
+
+
+//static Move get_player_input() {
+//	constexpr int arrow = -32;
+//	constexpr int enter = 13;
+//	constexpr int space = ' ';
+//	constexpr int esc = 27;
+//
+//	Coord src, dst;
+//
+//	char order = '\0';
+//	while (true) {
+//#pragma region input process
+//		order = _getch();
+//		if ('A' <= order && order <= 'Z')
+//			order += 'a' - 'A';
+//		switch (order) {
+//		case arrow: {
+//			order = _getch();
+//			switch (order) {
+//			case 72: order = 'w';
+//			case 75: order = 'a';
+//			case 80: order = 's';
+//			case 77: order = 'd';
+//			}
+//			break;
+//		}
+//		case space: {
+//			order = enter;
+//			break;
+//		}
+//		}
+//#pragma endregion
+//	}
+//}
+void Board::GAME(string fen) {
+	using std::cout;
+	Board board = Board(fen);
+	char order;
+
+	//사용자의 입력을 받는 함수.
+	//화살표 입력을 wasd로 전환해주는 역할이 메인이다.
+	std::function<char()> get_order = []() {
+		char order = _getch();
+		if (order == -32) {
+			order = _getch();
+			switch (order) {
+			case 72: return 'w';
+			case 75: return 'a';
+			case 80: return 's';
+			case 77: return 'd';
+			}
+		}
+		if (order == 13)
+			return ' ';
+		return order;
+		};
+	//입력받은 좌표를 한 칸 이동시키는 함수.
+	//order의 방향과 같은 방향으로 이동한다.
+	//체스판을 벗어나서 이동할 수 없게 설정했다.
+	std::function<void(Coord&)> move = [&order](Coord& crd) {
+		switch (order) {
+		case 'W': case 'w': if (crd.rank < RANK_8) ++crd.rank; break;
+		case 'A': case 'a': if (crd.file > FILE_A) --crd.file; break;
+		case 'S': case 's': if (crd.rank > RANK_1) --crd.rank; break;
+		case 'D': case 'd': if (crd.file < FILE_H) ++crd.file; break;
+		}
+		};
+
+	while (true) {
+		//src, dst는 각각 시작접과 도착점으로,
+		//다시 말해 기물, 그리고 기물이 도달할 위치이다.
+		Coord src = Coord(), dst = Coord();
+		board.print();
+
+		//차례가 백이면 왼쪽 아래에서, 흑이면 왼쪽 위에서 시작하도록 했다.
+		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
+		//dst의 선택 과정에서 취소를 택했을 때, 돌아오기 위한 goto 라벨이다.
+		game_src_cancel:
+		order = '\0';
+		//order가 space 이거나 enter인 경우 선택을 종료하도록 했다
+		while (true) {
+			//src와 dst를 반영해 현 상황을 화면에 출력한다.
+			board.print(Move(src, dst));
+#pragma region src input
+			order = get_order();
+			move(src);
+			if (order == 'Q' || order == 'q');
+			//order가 esc인 경우 GAME() 함수를 종료한다.
+			else if (order == 27)	return;
+#pragma endregion
+#pragma region src check legal
+			//체례에 맞는 기물의 위치를 선택하지 않았을 경우, 다시 선택하도록 한다.
+			else if (order == ' ') {
+				if (board.get_side(src) != board.turn) {
+					std::cout << '\n';
+					std::cout << "잘못된 진영을 선택했습니다." << '\n';
+					std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
+					std::cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
+				else
+					break;
+			}
+#pragma endregion
+		}
+
+		//dst의 초기 위치를 src로 지정한다.
+		dst = src;
+		order = '\0';
+		while (order != ' '&& order != 13) {
+			//src와 dst를 반영해 현 상황을 화면에 출력한다.
+			board.print(Move(src, dst));
+#pragma region dst input
+			order = get_order();
+			move(dst);
+			if (order == 'Q' || order == 'q') {
+				dst = Coord();
+				//src가 시작하는 위치로 되돌아간다.
+				goto game_src_cancel;
+			}
+			else if (order == 27)	return;
+#pragma endregion
+#pragma region dst check legal
+			else if (order == ' ') {
+				//움직일 수 있는 움직임들 계산
+				vector<Move> moves;
+				switch (board.get_piece(src)) {
+				case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
+				case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
+				case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
+				case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
+				case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
+				case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
+				}
+				//목표하는 움직임이 위의 움직임에 포함되는가 확인
+				bool is_coord_legal = true;
+				Move move = Move(src, dst);
+				if (find(moves.begin(), moves.end(), move) == moves.end())
+					is_coord_legal = false;
+				//절대적 핀 판단을 위한 변수들
+				bool is_pin_legal = true;
+				Board new_board = board.make_moved_board(move);
+				Side check_side = new_board.check();
+				if (check_side == board.turn ||
+					check_side == GREY)
+					is_pin_legal = false;
+				//이동이 적법한지 최종 확인
+				if (is_coord_legal && is_pin_legal)
+					break;
+				else {
+					cout << '\n';
+					cout << "잘못된 위치를 선택했습니다." << '\n';
+					if (!is_coord_legal)
+						cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
+					if (!is_pin_legal)
+						cout << "사유 : 절대적 핀 상태에 놓임\n";
+					cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
+			}
+#pragma endregion
+		}
+
+		//플레이거가 선택한 이동을 적용한다.
+		board.apply_move(Move(src, dst));
+
+		//프로모션 가능한 경우, 원하는 말을 선택하도록 한다.
+		char piece = board.get_piece(dst);
+		if (piece == 'P' && dst.rank == RANK_8 ||
+			piece == 'p' && dst.rank == RANK_1) {
+			cout << "프로모션 가능합니다.\n";
+			cout << "교체를 원하는 기물을 선택해 주세요.\n";
+			cout << "\t(Q : 퀸, R : 룩, B : 비숍, N : 나이트, 0 : 취소)\n";
+			char order = '\0';
+			bool input_process = true;
+			while (input_process) {
+				order = _getch();
+				//order가 대문자인 경우, 소문자로 변환해준다.
+				if ('A' <= order && order <= 'Z')
+					order += 'a' - 'A';
+				switch (order) {
+				case 'q':
+				case 'r':
+				case 'b':
+				case 'n':
+					//프로모션으로서 바꿀 기물을 선택했을 경우, 선택한 대로 기물을 바꿔준다.
+					board.set_piece(dst, piece + order - 'p');
+				case '0':
+					//0을 입력했을 경우, 그대로 반복문을 적용하도록 한다.
+					input_process = false;
+					break;
+				default:
+					//선택지 밖의 입력이 주어졌을 경우, 다시 선택하도록 한다.
+					cout << "잘못된 입력입니다.\n";
+					break;
+				}
+			}
+		}
+	}
+}
+/*
+	< 특수규칙 상황 커멘트 >
+
+앙파상 :
+	"w ww d ssa www w ds ss wwww dw "
+
+킹사이드 캐슬링 :
+	"dddddddw ww s s ddddddw ww ss s ddddd dw ds s dddddd dww dss s `dddd dd "
+	"ddddddw ww dddddds ss ddddd dwdw ddddd dsds dddddd wwa dddddd ssa `dddd dd "
+
+퀸사이드 캐슬링 :
+	"d wwa s s dw ww ss s dd aw ds s ddw w dss s ddd aw dds s `dddd aa "
+
+*/
+
+
+void Board::BOT_GAME(string fen) {
+#pragma region constant values
+	constexpr int arrow = -32;
+	constexpr int enter = 13;
+	constexpr int space = ' ';
+	constexpr int esc = 27;
+#pragma endregion
+	using std::cout;
+	Board board = Board(fen);
+	char order;
+	Coord src = Coord();
+	Coord dst = Coord();
+	PruningTree p_tree;
+
+	while (true) {
+		src = Coord(RANK_1, FILE_A);
+		dst = Coord();
+		board.print();
+
+		//플레이어1
+#pragma region input process 1
+		bot_game_src_cancel:
+		order = '\0';
+		while (true) {
+			board.print(Move(src, dst));
+			order = _getch();
+			switch (order) {
+			case arrow: {
+				order = _getch();
+				switch (order) {
+				case 72: order = 'w'; break;
+				case 75: order = 'a'; break;
+				case 80: order = 's'; break;
+				case 77: order = 'd'; break;
+				}
+				break;
+			}
+			case space: {
+				order = enter;
+				break;
+			}
+			case esc:
+				return;
+			}
+			switch (order) {
+			case 'W': case 'w': if (src.rank < RANK_8) ++src.rank; break;
+			case 'A': case 'a': if (src.file > FILE_A) --src.file; break;
+			case 'S': case 's': if (src.rank > RANK_1) --src.rank; break;
+			case 'D': case 'd': if (src.file < FILE_H) ++src.file; break;
+			}
+			if (order == enter) {
+				if (board.get_side(src) != board.turn) {
+					std::cout << '\n';
+					std::cout << "잘못된 진영을 선택했습니다." << '\n';
+					std::cout << "올바른 진영의 기물을 선택해 주세요." << '\n';
+					std::cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
+				else
+					break;
+			}
+		}
+#pragma endregion
+#pragma region input process 2
+		dst = src;
+		order = '\0';
+		while (true) {
+			board.print(Move(src, dst));
+			order = _getch();
+			switch (order) {
+			case arrow: {
+				order = _getch();
+				switch (order) {
+				case 72: order = 'w'; break;
+				case 75: order = 'a'; break;
+				case 80: order = 's'; break;
+				case 77: order = 'd'; break;
+				}
+				break;
+			}
+			case space: {
+				order = enter;
+				break;
+			}
+			case esc:
+				return;
+			}
+			switch (order) {
+			case 'W': case 'w': if (dst.rank < RANK_8) ++dst.rank; break;
+			case 'A': case 'a': if (dst.file > FILE_A) --dst.file; break;
+			case 'S': case 's': if (dst.rank > RANK_1) --dst.rank; break;
+			case 'D': case 'd': if (dst.file < FILE_H) ++dst.file; break;
+			case 'Q': case 'q':
+				dst = Coord();
+				goto bot_game_src_cancel;
+				break;
+			}
+			if (order == enter) {
+				//움직일 수 있는 움직임들 계산
+				vector<Move> moves;
+				switch (board.get_piece(src)) {
+				case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
+				case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
+				case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
+				case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
+				case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
+				case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
+				}
+				//목표하는 움직임이 위의 움직임에 포함되는가 확인
+				bool is_coord_legal = true;
+				Move move = Move(src, dst);
+				if (find(moves.begin(), moves.end(), move) == moves.end())
+					is_coord_legal = false;
+				//절대적 핀 판단을 위한 변수들
+				bool is_pin_legal = true;
+				Board new_board = board.make_moved_board(move);
+				Side check_side = new_board.check();
+				if (check_side == board.turn ||
+					check_side == GREY)
+					is_pin_legal = false;
+				//이동이 적법한지 최종 확인
+				if (is_coord_legal && is_pin_legal)
+					break;
+				else {
+					cout << '\n';
+					cout << "잘못된 위치를 선택했습니다." << '\n';
+					if (!is_coord_legal)
+						cout << "사유 : 이 기물은 선택한 위치로 이동할 수 없음\n";
+					if (!is_pin_legal)
+						cout << "사유 : 절대적 핀 상태에 놓임\n";
+					cout << "(Press any button to continue.)" << '\n';
+					_getch();
+				}
+			}
+		}
+#pragma endregion
+		board.apply_move(Move(src, dst));
+
+		//플레이어2
+#pragma region input process
+		board.print();
+		Move p_move = p_tree.get_nxt_move(board.to_fen());
+		board.print(p_move);
+#pragma endregion
+		board.apply_move(p_move);
+	}
 }

@@ -11,9 +11,13 @@ using std::vector;
 
 class Node {
 public:
-	Node() : fen(default_fen) {}
+	Node() {
+		*this = Node(default_fen);
+	}
 	Node(string fen)
-		: fen(fen) {}
+		: fen(fen) {
+		cld.resize(0);
+	}
 	/// <summary>
 	/// Node의 소멸자.
 	/// <para>

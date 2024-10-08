@@ -83,6 +83,14 @@ public:
 	/// </para>
 	/// </summary>
 	static void GAME(string fen = default_fen);
+	/// <summary>
+	/// GAME()에 체스엔진 대전 기능을 추가한 디버그용 함수이다.
+	/// <para>
+	///		키의 이동은 WASD로, 좌표의 결정은 SPACE로 이뤄지며,
+	///		Q는 취소, ESC는 종료이다.
+	/// </para>
+	/// </summary>
+	static void BOT_GAME(string fen = default_fen);
 	
 private:
 	/// <summary>
