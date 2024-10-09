@@ -16,18 +16,15 @@ struct Move {
 	Coord dst;
 
 	Move() : src(), dst() {}
-	Move(Coord src_crd, Coord dst_crd)
+	Move(const Coord& src_crd, const Coord& dst_crd)
 		: src(src_crd), dst(dst_crd) {}
 
-	bool operator==(Move other) const {
+	bool operator==(const Move& other) const {
 		if (src == other.src &&
 			dst == other.dst)
 			return true;
 		else
 			return false;
-	}
-	bool operator!=(Move other) const {
-		return !this->operator==(other);
 	}
 };
 

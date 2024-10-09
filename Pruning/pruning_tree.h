@@ -10,7 +10,7 @@ public:
 	/// 다음에 이어질 최적의 수를 반환한다.
 	/// </summary>
 	/// <returns> 계산된 최적의 수 </returns>
-	Move get_nxt_move(string fen);
+	Move get_nxt_move(const Board& board);
 
 private:
 	/// <summary>
@@ -21,7 +21,7 @@ private:
 	/// <param name="alpha"> 휴리스틱 범위의 최솟값 </param>
 	/// <param name="beta"> 휴리스틱 범위의 최댓값 </param>
 	/// <returns> 탐색 결과, 최적인 휴리스틱 값 </returns>
-	int finding_n_pruning(string fen, int depth, int alpha, int beta);
+	int finding_n_pruning(const Board& board, int depth, int alpha, int beta);
 
 };
 

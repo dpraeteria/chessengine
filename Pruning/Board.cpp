@@ -9,9 +9,9 @@
 
 
 Board::Board() {
-	for (int i = 0; i < 64; ++i)
-		board[i] = ' ';
-	turn = EMPTY;
+	for (int idx = WK; idx <= BP; ++idx)
+		_exist[idx] = 0;
+	turn = Empty;
 	castling_K = false;
 	castling_Q = false;
 	castling_k = false;
@@ -20,7 +20,7 @@ Board::Board() {
 	half_move = 0;
 	full_move = 0;
 }
-Board::Board(string FEN) {
+Board::Board(const string& FEN) {
 	*this = Board();
 
 	int64_t src_idx = -1;
@@ -47,7 +47,22 @@ Board::Board(string FEN) {
 		}
 		else if (c == '/'); //c가 '/'인 경우는 무시한다.
 		else if (isalpha(c)) {
-			set_piece(Coord(rank, file), c);
+			PieceType p_type = Non;
+			switch (c) {
+			case 'K': p_type = WK; break;
+			case 'Q': p_type = WQ; break;
+			case 'R': p_type = WR; break;
+			case 'B': p_type = WB; break;
+			case 'N': p_type = WN; break;
+			case 'P': p_type = WP; break;
+			case 'k': p_type = BK; break;
+			case 'q': p_type = BQ; break;
+			case 'r': p_type = BR; break;
+			case 'b': p_type = BB; break;
+			case 'n': p_type = BN; break;
+			case 'p': p_type = BP; break;
+			}
+			set_on_piece(p_type, Coord(rank, file));
 			++file;
 		}
 		else if (isdigit(c)) {
@@ -59,8 +74,8 @@ Board::Board(string FEN) {
 
 	//차례
 	switch (turn_str[0]) {
-	case 'W': case 'w': turn = WHITE; break;
-	case 'B': case 'b': turn = BLACK; break;
+	case 'W': case 'w': turn = White; break;
+	case 'B': case 'b': turn = Black; break;
 	default:
 		break;
 	}
@@ -96,8 +111,6 @@ Board::Board(string FEN) {
 	if (full_move_str != "-")
 		full_move = std::stoi(full_move_str);
 }
-
-
 string Board::to_fen() const {
 	string fen;
 
@@ -106,15 +119,15 @@ string Board::to_fen() const {
 	for (Rank rank = RANK_8; rank >= RANK_1; --rank) {
 		for (File file = FILE_A; file <= FILE_H; ++file) {
 			const char piece = get_piece(Coord(rank, file));
-			if (piece == 'E' || piece == 'e' || piece == ' ') {
-				empty_cnt++;
-			}
-			else {
+			if (piece != ' ') {
 				if (empty_cnt != 0) {
 					fen += std::to_string(empty_cnt);
 					empty_cnt = 0;
 				}
 				fen += piece;
+			}
+			else {
+				empty_cnt++;
 			}
 		}
 		if (empty_cnt != 0) {
@@ -128,8 +141,8 @@ string Board::to_fen() const {
 
 	//차례
 	switch (turn) {
-	case WHITE: fen += 'w'; break;
-	case BLACK: fen += 'b'; break;
+	case White: fen += 'w'; break;
+	case Black: fen += 'b'; break;
 	default:	fen += '-'; break;
 	}
 	fen += ' ';
@@ -166,49 +179,80 @@ string Board::to_fen() const {
 
 	return fen;
 }
-void Board::set_piece(Coord coord, char piece) {
-	//[0,64)를 [0,8), [8,16), [16,24), [24,32), [32,40), [40,48), [48,56), [56,64)의 8개의 구간으로 나누고,
-	//이 구간들을 순서대로 쌓아서 8*8의 '2차원 배열'로 생각할 수 있다.
-	//이때 Rank와 File은 각각 배열의 행과 열이 되고,
-	//구간의 길이가 8이기 때문에 rank행 file열은 1차원 배열에서 8*rank+file 번째 위치와 같은 것이다.
-	board[8 * coord.rank + coord.file] = piece;
+
+
+inline void Board::set_on_piece(PieceType piece, const Coord& coord) {
+	int crd = 8 * coord.rank + coord.file;
+	for (int idx = WK; idx <= BP; ++idx)
+		_exist[idx] &= ~(1ull << crd);
+	_exist[piece] |= (1ull << crd);
 }
-char Board::get_piece(Coord coord) const {
-	//64칸중 랭크는 8의 배수.1랭크 올라갈 때마다 64칸 Array에서 index는 8 증가.(E.g | e파일 4랭크는 5행 4열 ( 5+4*8 ))
-	return board[8 * coord.rank + coord.file];
+inline void Board::del_on_coord(PieceType piece, const Coord& coord) {
+	int crd = 8 * coord.rank + coord.file;
+	_exist[piece] &= ~(1ull << crd);
 }
-Side Board::get_side(Coord coord) const {
-	const char piece = get_piece(coord);
-	if ('A' <= piece && piece <= 'Z') return WHITE;
-	if ('a' <= piece && piece <= 'z') return BLACK;
-	return EMPTY;
+inline bool Board::get_on_piece(PieceType piece, const Coord& coord) const {
+	int crd = 8 * coord.rank + coord.file;
+	return _exist[piece] & (1ull << crd);
+}
+inline char Board::get_piece(const Coord& coord) const {
+	PieceType p_type = Non;
+	for (int idx = WK; idx <= BP; ++idx)
+		if (get_on_piece(PieceType(idx), coord))
+			p_type = PieceType(idx);
+
+	switch (p_type) {
+	case WK: return 'K';
+	case WQ: return 'Q';
+	case WR: return 'R';
+	case WB: return 'B';
+	case WN: return 'N';
+	case WP: return 'P';
+
+	case BK: return 'k';
+	case BQ: return 'q';
+	case BR: return 'r';
+	case BB: return 'b';
+	case BN: return 'n';
+	case BP: return 'p';
+
+	case Non:
+	default:
+		return ' ';
+	}
+}
+inline Side Board::get_side(const Coord& coord) const {
+	int crd = 8 * coord.rank + coord.file;
+	for (int piece = WK; piece <= WP; ++piece) if (_exist[piece] & (1ull << crd)) return White;
+	for (int piece = BK; piece <= BP; ++piece) if (_exist[piece] & (1ull << crd)) return Black;
+	return Empty;
 }
 
 
-inline bool Board::check(Coord k_crd, Side side) const {
+inline bool Board::check(const Coord& k_crd, Side side) const {
 	for (Move move : __movable_k(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'k' ||
-			side == BLACK && get_piece(move.dst) == 'K')
+		if (side == White && get_on_piece(BK, move.dst) ||
+			side == Black && get_on_piece(WK, move.dst))
 			return true;
 
 	for (Move move : movable_r(k_crd, side))
-		if (side == WHITE && (get_piece(move.dst) == 'r' || get_piece(move.dst) == 'q') ||
-			side == BLACK && (get_piece(move.dst) == 'R' || get_piece(move.dst) == 'Q'))
+		if (side == White && (get_on_piece(BR, move.dst) || get_on_piece(BQ, move.dst)) ||
+			side == Black && (get_on_piece(WR, move.dst) || get_on_piece(WQ, move.dst)))
 			return true;
 
 	for (Move move : movable_b(k_crd, side))
-		if (side == WHITE && (get_piece(move.dst) == 'b' || get_piece(move.dst) == 'q') ||
-			side == BLACK && (get_piece(move.dst) == 'B' || get_piece(move.dst) == 'Q'))
+		if (side == White && (get_on_piece(BB, move.dst) || get_on_piece(BQ, move.dst)) ||
+			side == Black && (get_on_piece(WB, move.dst) || get_on_piece(WQ, move.dst)))
 			return true;
 
 	for (Move move : movable_n(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'n' ||
-			side == BLACK && get_piece(move.dst) == 'N')
+		if (side == White && get_on_piece(BN, move.dst) ||
+			side == Black && get_on_piece(WN, move.dst))
 			return true;
 
 	for (Move move : movable_p(k_crd, side))
-		if (side == WHITE && get_piece(move.dst) == 'p' ||
-			side == BLACK && get_piece(move.dst) == 'P')
+		if (side == White && get_on_piece(BP, move.dst) ||
+			side == Black && get_on_piece(WP, move.dst))
 			return true;
 
 	return false;
@@ -219,19 +263,19 @@ inline Side Board::check() const {
 	for (Rank rank = RANK_1; rank <= RANK_8; ++rank) {
 		for (File file = FILE_A; file <= FILE_H; ++file) {
 			Coord coord = Coord(rank, file);
-			if (get_piece(coord) == 'K') w_king = coord;
-			if (get_piece(coord) == 'k') b_king = coord;
+			if (get_on_piece(WK, coord)) w_king = coord;
+			if (get_on_piece(BK, coord)) b_king = coord;
 		}
 	}
 
-	bool w_checked = check(w_king, WHITE);
-	bool b_checked = check(b_king, BLACK);
+	bool w_checked = check(w_king, White);
+	bool b_checked = check(b_king, Black);
 
 	if (w_checked && b_checked)
-		return GREY;
-	else if (w_checked)	return WHITE;
-	else if (b_checked)	return BLACK;
-	else				return EMPTY;
+		return Grey;
+	else if (w_checked)	return White;
+	else if (b_checked)	return Black;
+	else				return Empty;
 }
 //좀 더 최적화된 형태로 만들어야 하나...
 inline bool Board::checkmate() const {
@@ -239,7 +283,7 @@ inline bool Board::checkmate() const {
 	for (Move move : moves) {
 		Board new_board = make_moved_board(move);
 		Side check_side = new_board.check();
-		if (check_side == turn && check_side == GREY); //더블 체크인 경우는 어떻게 되는가...
+		if (check_side == turn && check_side == Grey); //더블 체크인 경우는 어떻게 되는가...
 		else
 			return true;
 	}
@@ -253,30 +297,33 @@ inline bool Board::movable_piece(const Coord& dst_crd) const {
 	else
 		return false;
 }
-inline void Board::move_piece_to(Coord src_crd, Coord dst_crd) {
-	const char move_piece = get_piece(src_crd);
-	set_piece(dst_crd, move_piece);
-	set_piece(src_crd, ' ');
+inline void Board::move_piece_to(const Coord& src_crd, const Coord& dst_crd) {
+	for (int idx = WK; idx <= BP; ++idx) {
+		PieceType p_type = PieceType(idx);
+		if (get_on_piece(p_type, src_crd)) {
+			set_on_piece(p_type, dst_crd);
+			del_on_coord(p_type, src_crd);
+			break;
+		}
+	}
 }
-inline void Board::apply_move(Move move) {
-	const char move_piece = get_piece(move.src);
+inline void Board::apply_move(const Move& move) {
 #pragma region before move
 	//하프무브의 갱신
-	if (get_side(move.dst) == EMPTY)
+	if (get_side(move.dst) == Empty)
 		half_move++;
 	else
 		half_move = 0;
 	//풀무부의 갱신
-	full_move += (turn == BLACK) ? 1 : 0;
+	full_move += (turn == Black) ? 1 : 0;
 #pragma endregion
 #pragma region move
 	//통상적인 움직임
-	set_piece(move.dst, move_piece);
-	set_piece(move.src, ' ');
+	move_piece_to(move.src, move.dst);
 	//캐슬링
 	//	이미 movable_k()에서 캐슬링 가능 여부를 판단했으니, 따로 확인하지 않는다
 	//	킹은 이미 움직였기 때문에 룩만 추가적으로 움직인다.
-	if (move_piece == 'K') {
+	if (get_on_piece(WK, move.dst)) {
 		//백 킹사이드
 		if (castling_K && move.dst == Coord(RANK_1, FILE_G)) {
 			move_piece_to(
@@ -294,7 +341,7 @@ inline void Board::apply_move(Move move) {
 			castling_Q = false;
 		}
 	}
-	if (move_piece == 'k') {
+	else if (get_on_piece(BK, move.dst)) {
 		//흑 킹사이드
 		if (castling_k && move.dst == Coord(RANK_8, FILE_G)) {
 			move_piece_to(
@@ -314,61 +361,55 @@ inline void Board::apply_move(Move move) {
 	}
 	//앙파상 적용
 	if (en_passant == move.dst && (
-		move_piece == 'P' ||
-		move_piece == 'p')) {
+		get_on_piece(WP, move.dst) ||
+		get_on_piece(BP, move.dst))) {
 		if (en_passant.rank == RANK_3)
-			set_piece(Coord(RANK_4, en_passant.file), ' ');
+			set_on_piece(Non, Coord(RANK_4, en_passant.file));
 		if (en_passant.rank == RANK_6)
-			set_piece(Coord(RANK_5, en_passant.file), ' ');
+			set_on_piece(Non, Coord(RANK_5, en_passant.file));
 	}
 #pragma endregion
 #pragma region after move
 
 	//캐슬링 정보의 갱신
-	switch (move_piece) {
-	case 'K':
+	if (get_on_piece(WK, move.dst)) {
 		castling_K = false;
 		castling_Q = false;
-		break;
-	case 'R':
+	}
+	/*else*/ if (get_on_piece(WR, move.dst)) {
 		if (move.src == Coord(RANK_1, FILE_H)) castling_K = false; //킹사이드
 		if (move.src == Coord(RANK_1, FILE_A)) castling_Q = false; //퀀사이드
-		break;
-
-	case 'k':
+	}
+	/*else*/ if (get_on_piece(BK, move.dst)) {
 		castling_k = false;
 		castling_q = false;
-		break;
-	case 'r':
+	}
+	/*else*/ if (get_on_piece(BR, move.dst)) {
 		if (move.src == Coord(RANK_8, FILE_H)) castling_k = false; //킹사이드
 		if (move.src == Coord(RANK_8, FILE_A)) castling_q = false; //퀀사이드
-		break;
-
-	default:
-		break;
 	}
 
 	//앙파상 위치의 갱신
 	en_passant = Coord();
-	if (move_piece == 'P' &&
+	if (get_on_piece(WP, move.dst) &&
 		move.src.rank == RANK_2 &&
 		move.dst.rank == RANK_4)
 		en_passant = Coord(RANK_3, move.src.file);
-	if (move_piece == 'p' &&
+	/*else*/ if (get_on_piece(BP, move.dst) &&
 		move.src.rank == RANK_7 &&
 		move.dst.rank == RANK_5)
 		en_passant = Coord(RANK_6, move.src.file);
 
 	//차례의 전환
 	switch (turn) {
-	case WHITE: turn = BLACK; break;
-	case BLACK: turn = WHITE; break;
+	case White: turn = Black; break;
+	case Black: turn = White; break;
 	default:
 		throw;
 	}
 #pragma endregion
 }
-Board Board::make_moved_board(Move move) const {
+Board Board::make_moved_board(const Move& move) const {
 	Board potential_board = *this;
 	potential_board.apply_move(move);
 	return potential_board;
@@ -389,14 +430,12 @@ vector<Move> Board::movable_cases() const {
 			vector<Move> add;
 			//놓인 말의 종류에 따라 움질임 경우의 수를 계산하는 함수를
 			//	달리 구현하여 실행 및 변수 add에 대입한다.
-			switch (get_piece(src_crd)) {
-			case 'K': case 'k': { add = movable_k(src_crd, turn); break; }
-			case 'Q': case 'q': { add = movable_q(src_crd, turn); break; }
-			case 'R': case 'r': { add = movable_r(src_crd, turn); break; }
-			case 'B': case 'b': { add = movable_b(src_crd, turn); break; }
-			case 'N': case 'n': { add = movable_n(src_crd, turn); break; }
-			case 'P': case 'p': { add = movable_p(src_crd, turn); break; }
-			}
+			if (get_on_piece(WK, src_crd) || get_on_piece(BK, src_crd))			add = movable_k(src_crd, turn);
+			else if (get_on_piece(WQ, src_crd) || get_on_piece(BQ, src_crd))	add = movable_q(src_crd, turn);
+			else if (get_on_piece(WR, src_crd) || get_on_piece(BR, src_crd))	add = movable_r(src_crd, turn);
+			else if (get_on_piece(WB, src_crd) || get_on_piece(BB, src_crd))	add = movable_b(src_crd, turn);
+			else if (get_on_piece(WN, src_crd) || get_on_piece(BN, src_crd))	add = movable_n(src_crd, turn);
+			else if (get_on_piece(WP, src_crd) || get_on_piece(BP, src_crd))	add = movable_p(src_crd, turn);
 			//add의 요소들은 result에 추가된다.
 			result.insert(result.end(),
 				add.begin(), add.end());
@@ -404,7 +443,7 @@ vector<Move> Board::movable_cases() const {
 	}
 	return result;
 }
-inline vector<Move> Board::__movable_k(Coord src_crd, Side side) const {
+inline vector<Move> Board::__movable_k(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 	constexpr int move_r[8] = { +1,+1,+1,+0,+0,-1,-1,-1 };
 	constexpr int move_f[8] = { -1,+0,+1,-1,+1,-1,+0,+1 };
@@ -418,7 +457,7 @@ inline vector<Move> Board::__movable_k(Coord src_crd, Side side) const {
 	}
 	return result;
 }
-inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_k(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 
 	vector<Move> __result = __movable_k(src_crd, side);
@@ -429,10 +468,10 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 	//주의할 것은, 캐슬링은 킹 뿐만이 아니라 룩까지 움직이는 특수한 규칙이라는 것이다.
 	//또한 이때 캐슬링은 일반적으로 1칸만을 움직이던 킹이 2칸을 움직인다.
 	//	따라서, 캐슬링은 킹이 2칸 움직이는 것을 그대로 넣어 버리면 된다!
-	if (side == WHITE) {
+	if (side == White) {
 		if (castling_K &&
-			get_side(Coord(RANK_1, FILE_F)) == EMPTY &&
-			get_side(Coord(RANK_1, FILE_G)) == EMPTY &&
+			get_side(Coord(RANK_1, FILE_F)) == Empty &&
+			get_side(Coord(RANK_1, FILE_G)) == Empty &&
 			!check(Coord(RANK_1, FILE_E), side) &&
 			!check(Coord(RANK_1, FILE_F), side) &&
 			!check(Coord(RANK_1, FILE_G), side)) {
@@ -441,8 +480,8 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 				Coord(RANK_1, FILE_G)));
 		}
 		if (castling_Q &&
-			get_side(Coord(RANK_1, FILE_C)) == EMPTY &&
-			get_side(Coord(RANK_1, FILE_D)) == EMPTY &&
+			get_side(Coord(RANK_1, FILE_C)) == Empty &&
+			get_side(Coord(RANK_1, FILE_D)) == Empty &&
 			!check(Coord(RANK_1, FILE_C), side) &&
 			!check(Coord(RANK_1, FILE_D), side) &&
 			!check(Coord(RANK_1, FILE_E), side)) {
@@ -453,8 +492,8 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 	}
 	else {
 		if (castling_k &&
-			get_side(Coord(RANK_8, FILE_F)) == EMPTY &&
-			get_side(Coord(RANK_8, FILE_G)) == EMPTY &&
+			get_side(Coord(RANK_8, FILE_F)) == Empty &&
+			get_side(Coord(RANK_8, FILE_G)) == Empty &&
 			!check(Coord(RANK_8, FILE_E), side) &&
 			!check(Coord(RANK_8, FILE_F), side) &&
 			!check(Coord(RANK_8, FILE_G), side)) {
@@ -463,8 +502,8 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 				Coord(RANK_8, FILE_G)));
 		}
 		if (castling_q &&
-			get_side(Coord(RANK_8, FILE_C)) == EMPTY &&
-			get_side(Coord(RANK_8, FILE_D)) == EMPTY &&
+			get_side(Coord(RANK_8, FILE_C)) == Empty &&
+			get_side(Coord(RANK_8, FILE_D)) == Empty &&
 			!check(Coord(RANK_8, FILE_C), side) &&
 			!check(Coord(RANK_8, FILE_D), side) &&
 			!check(Coord(RANK_8, FILE_E), side)) {
@@ -476,7 +515,7 @@ inline vector<Move> Board::movable_k(Coord src_crd, Side side) const {
 
 	return result;
 }
-inline vector<Move> Board::movable_q(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_q(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 	vector<Move> b_movable = movable_b(src_crd, side);
 	vector<Move> r_movable = movable_r(src_crd, side);
@@ -484,13 +523,13 @@ inline vector<Move> Board::movable_q(Coord src_crd, Side side) const {
 	result.insert(result.end(), r_movable.begin(), r_movable.end());
 	return result;
 }
-inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_r(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 	for (Rank rank = src_crd.rank + 1; rank <= RANK_8; ++rank) {
 		Coord dst_crd = Coord(rank, src_crd.file);
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -500,7 +539,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 		Coord dst_crd = Coord(src_crd.rank, file);
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -510,7 +549,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 		Coord dst_crd = Coord(rank, src_crd.file);
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -520,7 +559,7 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 		Coord dst_crd = Coord(src_crd.rank, file);
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -528,12 +567,12 @@ inline vector<Move> Board::movable_r(Coord src_crd, Side side) const {
 	}
 	return result;
 }
-inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_b(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 	for (Coord dst_crd{ src_crd.rank + 1, src_crd.file - 1 }; dst_crd.on_board(); ++dst_crd.rank, --dst_crd.file) {
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -542,7 +581,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 	for (Coord dst_crd{ src_crd.rank + 1, src_crd.file + 1 }; dst_crd.on_board(); ++dst_crd.rank, ++dst_crd.file) {
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -551,7 +590,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 	for (Coord dst_crd{ src_crd.rank - 1, src_crd.file - 1 }; dst_crd.on_board(); --dst_crd.rank, --dst_crd.file) {
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -560,7 +599,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 	for (Coord dst_crd{ src_crd.rank - 1, src_crd.file + 1 }; dst_crd.on_board(); --dst_crd.rank, ++dst_crd.file) {
 		if (movable_piece(dst_crd)) {
 			result.push_back(Move(src_crd, dst_crd));
-			if (get_side(dst_crd) != EMPTY)
+			if (get_side(dst_crd) != Empty)
 				break;
 		}
 		else
@@ -568,7 +607,7 @@ inline vector<Move> Board::movable_b(Coord src_crd, Side side) const {
 	}
 	return result;
 }
-inline vector<Move> Board::movable_n(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_n(const Coord& src_crd, Side side) const {
 	vector<Move> result;
 	constexpr int move_r[8] = { +2,+2,+1,-1,-2,-2,-1,+1, };
 	constexpr int move_f[8] = { -1,+1,+2,+2,+1,-1,-2,-2, };
@@ -582,18 +621,18 @@ inline vector<Move> Board::movable_n(Coord src_crd, Side side) const {
 	}
 	return result;
 }
-inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
+inline vector<Move> Board::movable_p(const Coord& src_crd, Side side) const {
 	vector<Move> result;
-	if (side == WHITE) {
+	if (side == White) {
 		//한 칸 전진
 		Coord dst_crd = Coord(src_crd.rank + 1, src_crd.file);
-		if (dst_crd.on_board() && get_side(dst_crd) == EMPTY) {
+		if (dst_crd.on_board() && get_side(dst_crd) == Empty) {
 			result.push_back(Move(src_crd, dst_crd));
 
 			//두 칸 전진 가능할 경우 (한 칸 전진한 상태에서) 한 칸 추가 전진
 			if (src_crd.rank == RANK_2) {
 				++dst_crd.rank;
-				if (get_side(dst_crd) == EMPTY)
+				if (get_side(dst_crd) == Empty)
 					result.push_back(Move(src_crd, dst_crd));
 			}
 		}
@@ -611,13 +650,13 @@ inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
 	else {
 		//한 칸 전진
 		Coord dst_crd = Coord(src_crd.rank - 1, src_crd.file);
-		if (dst_crd.on_board() && get_side(dst_crd) == EMPTY) {
+		if (dst_crd.on_board() && get_side(dst_crd) == Empty) {
 			result.push_back(Move(src_crd, dst_crd));
 
 			//두 칸 전진 가능할 경우 (한 칸 전진한 상태에서) 한 칸 추가 전진
 			if (src_crd.rank == RANK_7) {
 				--dst_crd.rank;
-				if (get_side(dst_crd) == EMPTY)
+				if (get_side(dst_crd) == Empty)
 					result.push_back(Move(src_crd, dst_crd));
 			}
 		}
@@ -636,7 +675,7 @@ inline vector<Move> Board::movable_p(Coord src_crd, Side side) const {
 }
 
 
-void Board::print(Move move) const {
+void Board::print(const Move& move) const {
 	using std::cout;
 	const std::function<void(int)> set_color = [](int color) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
@@ -651,13 +690,13 @@ void Board::print(Move move) const {
 			cout << "|";
 			Coord coord = Coord(rank, file);
 			if (false);
-			else if (get_side(Coord(rank, file)) == WHITE) set_color(0xF0);
-			else if (get_side(Coord(rank, file)) == BLACK) set_color(0x80);
-			if (turn == WHITE) {
+			else if (get_side(Coord(rank, file)) == White) set_color(0xF0);
+			else if (get_side(Coord(rank, file)) == Black) set_color(0x80);
+			if (turn == White) {
 				if (move.src == coord) set_color(0x30);
 				if (move.dst == coord) set_color(0x10);
 			}
-			if (turn == BLACK) {
+			if (turn == Black) {
 				if (move.src == coord) set_color(0x50);
 				if (move.dst == coord) set_color(0xC0);
 			}
@@ -671,7 +710,7 @@ void Board::print(Move move) const {
 	cout << "\n";
 
 	cout << "fen = \"" << to_fen() << "\"\n";
-	cout << "turn\t\t" << (turn == WHITE ? "WHITE" : "BLACK") << '\n';
+	cout << "turn\t\t" << (turn == White ? "WHITE" : "BLACK") << '\n';
 	cout << "castling KQkq\t"
 		<< (castling_K ? '1' : '-') << ' ' << (castling_Q ? '1' : '-') << ' '
 		<< (castling_k ? '1' : '-') << ' ' << (castling_q ? '1' : '-') << ' ' << '\n';
@@ -732,7 +771,7 @@ void Board::print_movable_cases(Side side) const {
 //#pragma endregion
 //	}
 //}
-void Board::GAME(string fen) {
+void Board::GAME(const string& fen) {
 	using std::cout;
 	Board board = Board(fen);
 	char order;
@@ -773,7 +812,7 @@ void Board::GAME(string fen) {
 		board.print();
 
 		//차례가 백이면 왼쪽 아래에서, 흑이면 왼쪽 위에서 시작하도록 했다.
-		src = (board.turn == WHITE) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
+		src = (board.turn == White) ? Coord(RANK_1, FILE_A) : Coord(RANK_8, FILE_A);
 		//dst의 선택 과정에서 취소를 택했을 때, 돌아오기 위한 goto 라벨이다.
 		game_src_cancel:
 		order = '\0';
@@ -842,7 +881,7 @@ void Board::GAME(string fen) {
 				Board new_board = board.make_moved_board(move);
 				Side check_side = new_board.check();
 				if (check_side == board.turn ||
-					check_side == GREY)
+					check_side == Grey)
 					is_pin_legal = false;
 				//이동이 적법한지 최종 확인
 				if (is_coord_legal && is_pin_legal)
@@ -876,15 +915,17 @@ void Board::GAME(string fen) {
 			while (input_process) {
 				order = _getch();
 				//order가 대문자인 경우, 소문자로 변환해준다.
-				if ('A' <= order && order <= 'Z')
-					order += 'a' - 'A';
 				switch (order) {
-				case 'q':
-				case 'r':
-				case 'b':
-				case 'n':
-					//프로모션으로서 바꿀 기물을 선택했을 경우, 선택한 대로 기물을 바꿔준다.
-					board.set_piece(dst, piece + order - 'p');
+				case 'Q': board.set_on_piece(WQ, dst); break;
+				case 'R': board.set_on_piece(WR, dst); break;
+				case 'B': board.set_on_piece(WB, dst); break;
+				case 'N': board.set_on_piece(WN, dst); break;
+
+				case 'q': board.set_on_piece(BQ, dst); break;
+				case 'r': board.set_on_piece(BR, dst); break;
+				case 'b': board.set_on_piece(BB, dst); break;
+				case 'n': board.set_on_piece(BN, dst); break;
+
 				case '0':
 					//0을 입력했을 경우, 그대로 반복문을 적용하도록 한다.
 					input_process = false;
@@ -914,7 +955,7 @@ void Board::GAME(string fen) {
 */
 
 
-void Board::BOT_GAME(string fen) {
+void Board::BOT_GAME(const string& fen) {
 #pragma region constant values
 	constexpr int arrow = -32;
 	constexpr int enter = 13;
@@ -933,7 +974,7 @@ void Board::BOT_GAME(string fen) {
 		dst = Coord();
 		board.print();
 
-		//플레이어1
+		//플레이어1 - 인간
 #pragma region input process 1
 		bot_game_src_cancel:
 		order = '\0';
@@ -1014,14 +1055,12 @@ void Board::BOT_GAME(string fen) {
 			if (order == enter) {
 				//움직일 수 있는 움직임들 계산
 				vector<Move> moves;
-				switch (board.get_piece(src)) {
-				case 'K': case 'k': moves = board.movable_k(src, board.turn); break;
-				case 'Q': case 'q': moves = board.movable_q(src, board.turn); break;
-				case 'R': case 'r': moves = board.movable_r(src, board.turn); break;
-				case 'B': case 'b': moves = board.movable_b(src, board.turn); break;
-				case 'N': case 'n': moves = board.movable_n(src, board.turn); break;
-				case 'P': case 'p': moves = board.movable_p(src, board.turn); break;
-				}
+				if (board.get_on_piece(WK, src) || board.get_on_piece(BK, src))			moves = board.movable_k(src, board.turn);
+				else if (board.get_on_piece(WQ, src) || board.get_on_piece(BQ, src))	moves = board.movable_q(src, board.turn);
+				else if (board.get_on_piece(WR, src) || board.get_on_piece(BR, src))	moves = board.movable_r(src, board.turn);
+				else if (board.get_on_piece(WB, src) || board.get_on_piece(BB, src))	moves = board.movable_b(src, board.turn);
+				else if (board.get_on_piece(WN, src) || board.get_on_piece(BN, src))	moves = board.movable_n(src, board.turn);
+				else if (board.get_on_piece(WP, src) || board.get_on_piece(BP, src))	moves = board.movable_p(src, board.turn);
 				//목표하는 움직임이 위의 움직임에 포함되는가 확인
 				bool is_coord_legal = true;
 				Move move = Move(src, dst);
@@ -1032,7 +1071,7 @@ void Board::BOT_GAME(string fen) {
 				Board new_board = board.make_moved_board(move);
 				Side check_side = new_board.check();
 				if (check_side == board.turn ||
-					check_side == GREY)
+					check_side == Grey)
 					is_pin_legal = false;
 				//이동이 적법한지 최종 확인
 				if (is_coord_legal && is_pin_legal)
@@ -1052,10 +1091,10 @@ void Board::BOT_GAME(string fen) {
 #pragma endregion
 		board.apply_move(Move(src, dst));
 
-		//플레이어2
+		//플레이어2 - 기계
 #pragma region input process
 		board.print();
-		Move p_move = p_tree.get_nxt_move(board.to_fen());
+		Move p_move = p_tree.get_nxt_move(board);
 		board.print(p_move);
 #pragma endregion
 		board.apply_move(p_move);

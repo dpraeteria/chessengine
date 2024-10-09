@@ -45,10 +45,10 @@ public:
 		for (i = 0; fen[i] == ' '; ++i);
 		char turn = fen[i];
 		switch (turn) {
-		case 'W': case 'w': return WHITE;
-		case 'B': case 'b': return BLACK;
+		case 'W': case 'w': return White;
+		case 'B': case 'b': return Black;
 		default:
-			return EMPTY;
+			return Empty;
 		}
 	}
 	/// <summary>
