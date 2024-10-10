@@ -267,9 +267,9 @@ int eval(const Board& board)
 			else {
 				Side i_side = board.get_side(crd);
 				if (i_side == White)
-					piece_mat[LIGHT] += piece_value[PieceType_to_int(board.get_piece(cvt_crd(i)))];
+					piece_mat[LIGHT] += piece_value[PieceType_to_int(board.get_piece(i))];
 				else if (i_side == Black)
-					piece_mat[DARK] += piece_value[PieceType_to_int(board.get_piece(cvt_crd(i)))];
+					piece_mat[DARK] += piece_value[PieceType_to_int(board.get_piece(i))];
 			}
 		}
 	}
@@ -305,7 +305,6 @@ int eval(const Board& board)
 					score[LIGHT] += king_endgame_pcsq[i];
 				else
 					score[LIGHT] += eval_light_king(i);
-				break;
 			}
 			else if (board.get_on_piece(BK, crd)) {
 				if (piece_mat[LIGHT] <= 1200)
