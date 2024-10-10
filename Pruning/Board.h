@@ -63,6 +63,8 @@ public:
 	/// <param name="coord"> 기물을 둘 좌표 </param>
 	/// <returns> 기물의 종류. 기물이 없으면 ' ' </returns>
 	inline char get_piece(const Coord& coord) const;
+	//
+	inline PieceType get_piece(int coord) const;
 	/// <summary>
 	/// 특정 위치에 놓인 기물의 진영을 반환한다.
 	/// </summary>

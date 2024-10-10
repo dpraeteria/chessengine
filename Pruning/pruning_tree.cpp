@@ -50,7 +50,7 @@ int PruningTree::finding_n_pruning(const Board& par, int depth, int alpha, int b
 	
 	//목표한 최고 깊이에 도달했거나, 리프 노드라면 평가함수의 값을 반환한다.
 	if (depth == 0 || moves.size() == 0)
-		return eval(par.to_fen().c_str()); //eval() 최적화 완료되면 이 부분 수정
+		return eval(par);
 	
 	if (par.get_turn() == White) {
 		int v = -inf;

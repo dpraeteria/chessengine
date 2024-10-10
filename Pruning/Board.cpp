@@ -196,12 +196,8 @@ inline bool Board::get_on_piece(PieceType piece, const Coord& coord) const {
 	return _exist[piece] & (1ull << crd);
 }
 inline char Board::get_piece(const Coord& coord) const {
-	PieceType p_type = Non;
-	for (int idx = WK; idx <= BP; ++idx)
-		if (get_on_piece(PieceType(idx), coord))
-			p_type = PieceType(idx);
-
-	switch (p_type) {
+	int crd = 8 * coord.rank + coord.file;
+	switch (get_piece(crd)) {
 	case WK: return 'K';
 	case WQ: return 'Q';
 	case WR: return 'R';
@@ -220,6 +216,14 @@ inline char Board::get_piece(const Coord& coord) const {
 	default:
 		return ' ';
 	}
+}
+inline PieceType Board::get_piece(int coord) const {
+	PieceType p_type = Non;
+	Coord crd = Coord(Rank(coord / 8), File(coord % 8));
+	for (int idx = WK; idx <= BP; ++idx)
+		if (get_on_piece(PieceType(idx), crd))
+			p_type = PieceType(idx);
+	return p_type;
 }
 inline Side Board::get_side(const Coord& coord) const {
 	int crd = 8 * coord.rank + coord.file;
