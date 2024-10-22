@@ -12,13 +12,13 @@ Move PruningTree::get_nxt_move(const Board& root_board) {
 	if (root_board.get_turn() == White) {
 		int max_val = -inf;
 		Move max_move;
-		//rootÀÇ ¸ğµç °¡´É¼ºÀ» root¿¡ ÀÚ½ÄÀ¸·Î Ãß°¡ÇÏ±â
+		//rootì˜ ëª¨ë“  ê°€ëŠ¥ì„±ì„ rootì— ìì‹ìœ¼ë¡œ ì¶”ê°€í•˜ê¸°
 		vector<Move> moves = root_board.movable_cases();
 		for (Move move : moves) {
 			Board cld = root_board.make_moved_board(move);
-			//cld¸¦ ±âÁØÀ¸·Î Å½»öÀ» ½ÃÀÛÇÑ´Ù.
+			//cldë¥¼ ê¸°ì¤€ìœ¼ë¡œ íƒìƒ‰ì„ ì‹œì‘í•œë‹¤.
 			int val = finding_n_pruning(cld, max_depth, -inf, inf);
-			//Å½»ö °á°ú¸¦ ÃÖ¼Ò, ÃÖ´ñ°ª°ú ºñ±³ÇØ ÀúÀåÇÑ´Ù.
+			//íƒìƒ‰ ê²°ê³¼ë¥¼ ìµœì†Œ, ìµœëŒ“ê°’ê³¼ ë¹„êµí•´ ì €ì¥í•œë‹¤.
 			if (max_val < val) {
 				max_val = val;
 				max_move = move;
@@ -29,13 +29,13 @@ Move PruningTree::get_nxt_move(const Board& root_board) {
 	else {
 		int min_val = +inf;
 		Move min_move;
-		//rootÀÇ ¸ğµç °¡´É¼ºÀ» root¿¡ ÀÚ½ÄÀ¸·Î Ãß°¡ÇÏ±â
+		//rootì˜ ëª¨ë“  ê°€ëŠ¥ì„±ì„ rootì— ìì‹ìœ¼ë¡œ ì¶”ê°€í•˜ê¸°
 		vector<Move> moves = root_board.movable_cases();
 		for (Move move : moves) {
 			Board cld = root_board.make_moved_board(move);
-			//cld¸¦ ±âÁØÀ¸·Î Å½»öÀ» ½ÃÀÛÇÑ´Ù.
+			//cldë¥¼ ê¸°ì¤€ìœ¼ë¡œ íƒìƒ‰ì„ ì‹œì‘í•œë‹¤.
 			int val = finding_n_pruning(cld, max_depth, -inf, inf);
-			//Å½»ö °á°ú¸¦ ÃÖ¼Ò, ÃÖ´ñ°ª°ú ºñ±³ÇØ ÀúÀåÇÑ´Ù.
+			//íƒìƒ‰ ê²°ê³¼ë¥¼ ìµœì†Œ, ìµœëŒ“ê°’ê³¼ ë¹„êµí•´ ì €ì¥í•œë‹¤.
 			if (min_val > val) {
 				min_val = val;
 				min_move = move;
@@ -45,10 +45,10 @@ Move PruningTree::get_nxt_move(const Board& root_board) {
 	}
 }
 int PruningTree::finding_n_pruning(const Board& par, int depth, int alpha, int beta) {
-	//moves = ¿òÁ÷ÀÓ °æ¿ìÀÇ ¼ö º¤ÅÍ
+	//moves = ì›€ì§ì„ ê²½ìš°ì˜ ìˆ˜ ë²¡í„°
 	vector<Move> moves = par.movable_cases();
 	
-	//¸ñÇ¥ÇÑ ÃÖ°í ±íÀÌ¿¡ µµ´ŞÇß°Å³ª, ¸®ÇÁ ³ëµå¶ó¸é Æò°¡ÇÔ¼öÀÇ °ªÀ» ¹İÈ¯ÇÑ´Ù.
+	//ëª©í‘œí•œ ìµœê³  ê¹Šì´ì— ë„ë‹¬í–ˆê±°ë‚˜, ë¦¬í”„ ë…¸ë“œë¼ë©´ í‰ê°€í•¨ìˆ˜ì˜ ê°’ì„ ë°˜í™˜í•œë‹¤.
 	if (depth == 0 || moves.size() == 0)
 		return eval(par);
 	
@@ -57,15 +57,15 @@ int PruningTree::finding_n_pruning(const Board& par, int depth, int alpha, int b
 		for (Move move : moves) {
 			const Board cld = par.make_moved_board(move);
 			const Side check_side = cld.check();
-			//¹éÀÌ ¼ö¸¦ ºĞ °á°ú·Î ¹éÀÌ Ã¼Å©°¡ µÇ¾ú´Ù¸é continue.
+			//ë°±ì´ ìˆ˜ë¥¼ ë¶„ ê²°ê³¼ë¡œ ë°±ì´ ì²´í¬ê°€ ë˜ì—ˆë‹¤ë©´ continue.
 			if (check_side == White ||
 				check_side == Grey)
 				continue;
 	
-			v = std::max(v, finding_n_pruning(cld, depth - 1, alpha, beta));
-			alpha = std::max(alpha, v);
 			if (alpha >= beta)
 				break;
+			v = std::max(v, finding_n_pruning(cld, depth - 1, alpha, beta));
+			alpha = std::max(alpha, v);
 		}
 		return v;
 	}
@@ -74,15 +74,15 @@ int PruningTree::finding_n_pruning(const Board& par, int depth, int alpha, int b
 		for (Move move : moves) {
 			const Board cld = par.make_moved_board(move);
 			const Side check_side = cld.check();
-			//¹éÀÌ ¼ö¸¦ ºĞ °á°ú·Î ¹éÀÌ Ã¼Å©°¡ µÇ¾ú´Ù¸é continue.
+			//ë°±ì´ ìˆ˜ë¥¼ ë¶„ ê²°ê³¼ë¡œ ë°±ì´ ì²´í¬ê°€ ë˜ì—ˆë‹¤ë©´ continue.
 			if (check_side == Black ||
 				check_side == Grey)
 				continue;
 	
-			v = std::min(v, finding_n_pruning(cld, depth - 1, alpha, beta));
-			beta = std::min(beta, v);
 			if (alpha >= beta)
 				break;
+			v = std::min(v, finding_n_pruning(cld, depth - 1, alpha, beta));
+			beta = std::min(beta, v);
 		}
 		return v;
 	}
